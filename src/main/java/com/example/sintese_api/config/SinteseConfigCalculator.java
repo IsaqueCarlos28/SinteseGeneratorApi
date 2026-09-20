@@ -1,5 +1,8 @@
 package com.example.sintese_api.config;
 
+import org.springframework.stereotype.Component;
+
+@Component
 public class SinteseConfigCalculator {
 
     public SinteseConfig calcular(int quantidadePalavras) {
