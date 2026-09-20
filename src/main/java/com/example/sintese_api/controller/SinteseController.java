@@ -1,14 +1,12 @@
 package com.example.sintese_api.controller;
 
+import com.example.sintese_api.client.GeminiClient;
 import com.example.sintese_api.service.SinteseService;
 import com.example.sintese_api.dto.SinteseRequest;
 import com.example.sintese_api.dto.SinteseResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/sinteses")
@@ -28,5 +26,25 @@ public class SinteseController {
                 sinteseService.gerarSintese(request);
 
         return ResponseEntity.ok(response);
+    }
+
+    @RestController
+    public class GeminiTestController {
+
+        private final GeminiClient geminiClient;
+
+        public GeminiTestController(GeminiClient geminiClient) {
+            this.geminiClient = geminiClient;
+        }
+
+        @GetMapping("/teste-gemini")
+        public String testarGemini() {
+
+            return geminiClient.gerarSintese(
+                    "Você é um assistente que responde de forma curta.",
+                    "Explique em uma frase o que é uma API REST.",
+                    100
+            );
+        }
     }
 }
