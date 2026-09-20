@@ -9,12 +9,18 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/sinteses")
+@Tag(
+        name = "Sínteses",
+        description = "Operações relacionadas à geração de sínteses integradas."
+)
 public class SinteseController {
 
     private final SinteseService sinteseService;
@@ -37,8 +43,10 @@ public class SinteseController {
             description = "Documentos que serão utilizados para gerar a síntese integrada.",
             required = true,
             content = @Content(
-                    mediaType = "application/json",
-                    schema = @Schema(implementation = SinteseRequest.class),
+                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    schema = @Schema(
+                            implementation = SinteseRequest.class
+                    ),
                     examples = @ExampleObject(
                             name = "Exemplo de requisição",
                             value = """
@@ -62,8 +70,10 @@ public class SinteseController {
                     responseCode = "200",
                     description = "Síntese gerada com sucesso",
                     content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(implementation = SinteseResponse.class),
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(
+                                    implementation = SinteseResponse.class
+                            ),
                             examples = @ExampleObject(
                                     name = "Sucesso",
                                     value = """
@@ -79,7 +89,7 @@ public class SinteseController {
                     responseCode = "400",
                     description = "Dados da requisição inválidos ou quantidade de palavras acima do limite permitido",
                     content = @Content(
-                            mediaType = "application/json",
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
                             examples = {
                                     @ExampleObject(
                                             name = "Documento vazio",
@@ -87,7 +97,27 @@ public class SinteseController {
                                                     {
                                                       "detail": "O conteúdo do documento não pode ser vazio",
                                                       "status": 400,
-                                                      "title": "Dados inválidos"
+                                                      "title": "Requisição inválida"
+                                                    }
+                                                    """
+                                    ),
+                                    @ExampleObject(
+                                            name = "Lista de documentos vazia",
+                                            value = """
+                                                    {
+                                                      "detail": "A lista de documentos não pode ser vazia",
+                                                      "status": 400,
+                                                      "title": "Requisição inválida"
+                                                    }
+                                                    """
+                                    ),
+                                    @ExampleObject(
+                                            name = "JSON inválido",
+                                            value = """
+                                                    {
+                                                      "detail": "O corpo da requisição não possui um formato JSON válido.",
+                                                      "status": 400,
+                                                      "title": "JSON inválido"
                                                     }
                                                     """
                                     ),
@@ -106,10 +136,61 @@ public class SinteseController {
             ),
 
             @ApiResponse(
+                    responseCode = "404",
+                    description = "Recurso solicitado não encontrado",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            examples = @ExampleObject(
+                                    value = """
+                                            {
+                                              "detail": "O recurso solicitado não foi encontrado.",
+                                              "status": 404,
+                                              "title": "Recurso não encontrado"
+                                            }
+                                            """
+                            )
+                    )
+            ),
+
+            @ApiResponse(
+                    responseCode = "405",
+                    description = "Método HTTP não permitido para o recurso",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            examples = @ExampleObject(
+                                    value = """
+                                            {
+                                              "detail": "O método HTTP utilizado não é permitido para este recurso.",
+                                              "status": 405,
+                                              "title": "Método não permitido"
+                                            }
+                                            """
+                            )
+                    )
+            ),
+
+            @ApiResponse(
+                    responseCode = "415",
+                    description = "Tipo de conteúdo enviado não é suportado",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            examples = @ExampleObject(
+                                    value = """
+                                            {
+                                              "detail": "O tipo de conteúdo enviado não é suportado pela API.",
+                                              "status": 415,
+                                              "title": "Tipo de conteúdo não suportado"
+                                            }
+                                            """
+                            )
+                    )
+            ),
+
+            @ApiResponse(
                     responseCode = "429",
                     description = "Limite de requisições da Gemini atingido",
                     content = @Content(
-                            mediaType = "application/json",
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
                             examples = @ExampleObject(
                                     value = """
                                             {
@@ -124,10 +205,27 @@ public class SinteseController {
             ),
 
             @ApiResponse(
+                    responseCode = "500",
+                    description = "Erro inesperado durante o processamento da requisição",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            examples = @ExampleObject(
+                                    value = """
+                                            {
+                                              "detail": "Ocorreu um erro inesperado ao processar a requisição.",
+                                              "status": 500,
+                                              "title": "Erro interno do servidor"
+                                            }
+                                            """
+                            )
+                    )
+            ),
+
+            @ApiResponse(
                     responseCode = "502",
                     description = "Erro ao processar a requisição através da Gemini",
                     content = @Content(
-                            mediaType = "application/json",
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
                             examples = @ExampleObject(
                                     value = """
                                             {
@@ -145,7 +243,7 @@ public class SinteseController {
                     responseCode = "504",
                     description = "A Gemini demorou além do tempo limite configurado",
                     content = @Content(
-                            mediaType = "application/json",
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
                             examples = @ExampleObject(
                                     value = """
                                             {
@@ -159,10 +257,14 @@ public class SinteseController {
                     )
             )
     })
-    @PostMapping
+    @PostMapping(
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
     public ResponseEntity<SinteseResponse> criarSintese(
             @Valid @RequestBody SinteseRequest request
     ) {
+
         SinteseResponse response =
                 sinteseService.gerarSintese(request);
 
