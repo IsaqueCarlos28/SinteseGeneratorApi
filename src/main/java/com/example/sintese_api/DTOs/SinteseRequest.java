@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotEmpty;
 
 import java.util.List;
 
-public record SinteseRequestDTO(
+public record SinteseRequest(
         @NotEmpty(message = "A lista de documentos não pode ser vazia")
         @Valid
         List<DocumentoRequest> documentos

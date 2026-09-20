@@ -1,7 +1,7 @@
 package com.example.sintese_api.controller;
 
-import com.example.sintese_api.DTOs.SinteseRequestDTO;
-import com.example.sintese_api.DTOs.SinteseResponseDTO;
+import com.example.sintese_api.DTOs.SinteseRequest;
+import com.example.sintese_api.DTOs.SinteseResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -13,12 +13,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/sinteses")
 public class SinteseController {
     @PostMapping
-    public ResponseEntity<SinteseResponseDTO> criarSintese(
-            @Valid @RequestBody SinteseRequestDTO request
+    public ResponseEntity<SinteseResponse> criarSintese(
+            @Valid @RequestBody SinteseRequest request
     ) {
 
         return ResponseEntity.ok(
-                new SinteseResponseDTO("API funcionando!")
+                new SinteseResponse("API funcionando!")
         );
     }
 }

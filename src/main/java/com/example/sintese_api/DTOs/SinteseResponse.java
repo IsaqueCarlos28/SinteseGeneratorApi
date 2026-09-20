@@ -1,6 +1,6 @@
 package com.example.sintese_api.DTOs;
 
-public record SinteseResponseDTO(
+public record SinteseResponse(
         String sintese
 ) {
 }
