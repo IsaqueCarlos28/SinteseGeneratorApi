@@ -12,20 +12,21 @@ import org.springframework.web.client.RestClient;
 @Component
 public class GeminiClient {
 
-    private static final String GEMINI_URL =
-            "https://generativelanguage.googleapis.com/v1beta/interactions";
-
     private final RestClient restClient;
     private final String apiKey;
+    private final String model;
 
     public GeminiClient(
-            @Value("${gemini.api-key}") String apiKey
+            @Value("${gemini.url}") String url,
+            @Value("${gemini.api-key}") String apiKey,
+            @Value("${gemini.model}") String model
     ) {
         this.restClient = RestClient.builder()
-                .baseUrl(GEMINI_URL)
+                .baseUrl(url)
                 .build();
 
         this.apiKey = apiKey;
+        this.model = model;
     }
 
     public String gerarSintese(
@@ -35,7 +36,7 @@ public class GeminiClient {
     ) {
 
         GeminiRequest request = new GeminiRequest(
-                "gemini-3.8-flash",
+                model,
                 systemInstruction,
                 input,
                 new GenerationConfig(
