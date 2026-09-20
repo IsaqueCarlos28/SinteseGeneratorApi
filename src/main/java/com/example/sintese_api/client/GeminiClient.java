@@ -1,5 +1,7 @@
 package com.example.sintese_api.client;
 
+import java.time.Duration;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import com.example.sintese_api.exception.GeminiException;
 import com.example.sintese_api.exception.GeminiRateLimitException;
 import com.example.sintese_api.exception.GeminiTimeoutException;
@@ -21,8 +23,14 @@ public class GeminiClient {
             @Value("${gemini.api-key}") String apiKey,
             @Value("${gemini.model}") String model
     ) {
+        JdkClientHttpRequestFactory requestFactory =
+                new JdkClientHttpRequestFactory();
+
+        requestFactory.setReadTimeout(Duration.ofSeconds(15));
+
         this.restClient = RestClient.builder()
                 .baseUrl(url)
+                .requestFactory(requestFactory)
                 .build();
 
         this.apiKey = apiKey;
