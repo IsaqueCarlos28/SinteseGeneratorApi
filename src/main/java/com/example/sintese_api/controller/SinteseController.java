@@ -29,38 +29,5 @@ public class SinteseController {
         return ResponseEntity.ok(response);
     }
 
-    @RestController
-    public class GeminiTestController {
 
-        private final GeminiClient geminiClient;
-
-        public GeminiTestController(GeminiClient geminiClient) {
-            this.geminiClient = geminiClient;
-        }
-
-        @GetMapping("/teste-gemini")
-        public String testarGemini() {
-
-            return geminiClient.gerarSintese(
-                    "Você é um assistente que responde de forma curta.",
-                    "Explique em uma frase o que é uma API REST.",
-                    100
-            );
-        }
-    }
-
-    @RestController
-    public class PromptTesteController {
-
-        private final SintesePromptLoader promptLoader;
-
-        public PromptTesteController(SintesePromptLoader promptLoader) {
-            this.promptLoader = promptLoader;
-        }
-
-        @GetMapping("/teste-prompt")
-        public String testarPrompt() {
-            return promptLoader.carregar();
-        }
-    }
 }
