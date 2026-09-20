@@ -1,6 +1,4 @@
-package com.example.sintese_api.configurator;
-
-import org.springframework.stereotype.Component;
+package com.example.sintese_api.config;
 
 public class SinteseConfigCalculator {
 

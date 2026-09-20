@@ -1,4 +1,4 @@
-package com.example.sintese_api.configurator;
+package com.example.sintese_api.config;
 
 import org.junit.jupiter.api.Test;
 

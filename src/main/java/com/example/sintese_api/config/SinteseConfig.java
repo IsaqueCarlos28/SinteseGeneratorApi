@@ -1,4 +1,4 @@
-package com.example.sintese_api.configurator;
+package com.example.sintese_api.config;
 
 public record SinteseConfig(
         int minPalavras,

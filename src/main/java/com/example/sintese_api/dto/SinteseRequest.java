@@ -1,4 +1,4 @@
-package com.example.sintese_api.DTOs;
+package com.example.sintese_api.dto;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
