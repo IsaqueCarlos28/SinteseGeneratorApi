@@ -1,10 +1,10 @@
 package com.example.sintese_api.config;
 
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class SinteseConfigCalculatorTest {
 
@@ -12,13 +12,13 @@ class SinteseConfigCalculatorTest {
             new SinteseConfigCalculator();
 
     @Test
-    void deveCalcularLimitesParaAte60Palavras() {
+    void deveCalcularLimitesParaTextosMuitoPequenos() {
 
         SinteseConfig config = calculator.calcular(50);
 
-        assertEquals(15, config.minPalavras());
-        assertEquals(40, config.maxPalavras());
-        assertEquals(84, config.maxOutputTokens());
+        assertEquals(1, config.minPalavras());
+        assertEquals(50, config.maxPalavras());
+        assertEquals(100, config.maxOutputTokens());
     }
 
     @Test
@@ -73,14 +73,15 @@ class SinteseConfigCalculatorTest {
 
     @ParameterizedTest
     @CsvSource({
-            "60, 15, 45",
-            "61, 30, 48",
-            "150, 30, 85",
-            "151, 60, 120",
-            "400, 60, 180",
-            "401, 120, 280",
-            "800, 120, 280",
-            "801, 180, 420",
+            "10,   1,   10",
+            "60,   1,   60",
+            "61,   30,  48",
+            "150,  30,  85",
+            "151,  60,  120",
+            "400,  60,  180",
+            "401,  120, 280",
+            "800,  120, 280",
+            "801,  180, 420",
             "1500, 180, 420",
             "1501, 250, 500"
     })
@@ -94,5 +95,21 @@ class SinteseConfigCalculatorTest {
 
         assertEquals(minEsperado, config.minPalavras());
         assertEquals(maxEsperado, config.maxPalavras());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "10, 100",
+            "50, 100",
+            "60, 116"
+    })
+    void deveGarantirMinimoDe100TokensParaTextosPequenos(
+            int palavras,
+            int tokensEsperados
+    ) {
+
+        SinteseConfig config = calculator.calcular(palavras);
+
+        assertEquals(tokensEsperados, config.maxOutputTokens());
     }
 }
