@@ -47,4 +47,55 @@ public class GlobalExceptionHandler {
 
         return problem;
     }
+
+    @ExceptionHandler(GeminiRateLimitException.class)
+    public ProblemDetail handleGeminiRateLimit(
+            GeminiRateLimitException exception
+    ) {
+
+        ProblemDetail problem = ProblemDetail.forStatus(
+                HttpStatus.TOO_MANY_REQUESTS
+        );
+
+        problem.setTitle("Limite de requisições atingido");
+        problem.setDetail(
+                "A quantidade de requisições à Gemini excedeu o limite permitido."
+        );
+
+        return problem;
+    }
+
+    @ExceptionHandler(GeminiTimeoutException.class)
+    public ProblemDetail handleGeminiTimeout(
+            GeminiTimeoutException exception
+    ) {
+
+        ProblemDetail problem = ProblemDetail.forStatus(
+                HttpStatus.GATEWAY_TIMEOUT
+        );
+
+        problem.setTitle("Timeout na Gemini");
+        problem.setDetail(
+                "A Gemini demorou demais para responder."
+        );
+
+        return problem;
+    }
+
+    @ExceptionHandler(GeminiException.class)
+    public ProblemDetail handleGeminiException(
+            GeminiException exception
+    ) {
+
+        ProblemDetail problem = ProblemDetail.forStatus(
+                HttpStatus.BAD_GATEWAY
+        );
+
+        problem.setTitle("Erro na Gemini");
+        problem.setDetail(
+                "Não foi possível processar a síntese através da Gemini."
+        );
+
+        return problem;
+    }
 }
