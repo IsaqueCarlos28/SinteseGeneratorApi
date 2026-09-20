@@ -97,4 +97,19 @@ public class GlobalExceptionHandler {
 
         return problem;
     }
+
+    @ExceptionHandler(SinteseEntradaMuitoGrandeException.class)
+    public ProblemDetail handleSinteseEntradaMuitoGrande(
+            SinteseEntradaMuitoGrandeException exception
+    ) {
+
+        ProblemDetail problem = ProblemDetail.forStatus(
+                HttpStatus.BAD_REQUEST
+        );
+
+        problem.setTitle("Entrada muito grande");
+        problem.setDetail(exception.getMessage());
+
+        return problem;
+    }
 }

@@ -1,5 +1,7 @@
 package com.example.sintese_api.service;
 
+import com.example.sintese_api.exception.SinteseEntradaMuitoGrandeException;
+import org.springframework.beans.factory.annotation.Value;
 import com.example.sintese_api.exception.GeminiException;
 import tools.jackson.databind.ObjectMapper;
 import com.example.sintese_api.client.GeminiClient;
@@ -30,6 +32,9 @@ public class SinteseService {
         this.objectMapper = objectMapper;
     }
 
+    @Value("${sintese.max-palavras-entrada}")
+    private int maxPalavrasEntrada;
+
     public SinteseResponse gerarSintese(SinteseRequest request) {
 
         int quantidadePalavras = request.documentos()
@@ -38,6 +43,19 @@ public class SinteseService {
                         contarPalavras(documento.conteudo())
                 )
                 .sum();
+
+        if (quantidadePalavras > maxPalavrasEntrada) {
+            throw new SinteseEntradaMuitoGrandeException(
+                    "A quantidade total de palavras dos documentos excede o limite permitido. "
+                            + "Quantidade recebida: "
+                            + quantidadePalavras
+                            + ". Limite: "
+                            + maxPalavrasEntrada
+                            + "."
+            );
+        }
+
+
 
         SinteseConfig config =
                 configCalculator.calcular(quantidadePalavras);
