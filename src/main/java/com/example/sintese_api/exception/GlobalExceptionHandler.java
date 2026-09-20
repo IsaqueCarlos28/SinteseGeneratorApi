@@ -1,17 +1,17 @@
 package com.example.sintese_api.exception;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.context.request.ServletWebRequest;
-import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
-import org.springframework.http.converter.HttpMessageNotReadableException;
 
+import java.net.URI;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
@@ -19,7 +19,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ProblemDetail handleValidationException(
-            MethodArgumentNotValidException exception
+            MethodArgumentNotValidException exception,
+            HttpServletRequest request
     ) {
 
         String mensagem = exception.getBindingResult()
@@ -34,13 +35,15 @@ public class GlobalExceptionHandler {
 
         problem.setTitle("Requisição inválida");
         problem.setDetail(mensagem);
+        problem.setInstance(getRequestUri(request));
 
         return problem;
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ProblemDetail handleInvalidJson(
-            HttpMessageNotReadableException exception
+            HttpMessageNotReadableException exception,
+            HttpServletRequest request
     ) {
 
         ProblemDetail problem = ProblemDetail.forStatus(
@@ -51,13 +54,15 @@ public class GlobalExceptionHandler {
         problem.setDetail(
                 "O corpo da requisição não possui um formato JSON válido."
         );
+        problem.setInstance(getRequestUri(request));
 
         return problem;
     }
 
     @ExceptionHandler(SinteseEntradaMuitoGrandeException.class)
     public ProblemDetail handleSinteseEntradaMuitoGrande(
-            SinteseEntradaMuitoGrandeException exception
+            SinteseEntradaMuitoGrandeException exception,
+            HttpServletRequest request
     ) {
 
         ProblemDetail problem = ProblemDetail.forStatus(
@@ -66,13 +71,15 @@ public class GlobalExceptionHandler {
 
         problem.setTitle("Entrada muito grande");
         problem.setDetail(exception.getMessage());
+        problem.setInstance(getRequestUri(request));
 
         return problem;
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ProblemDetail handleMethodNotSupported(
-            HttpRequestMethodNotSupportedException exception
+            HttpRequestMethodNotSupportedException exception,
+            HttpServletRequest request
     ) {
 
         ProblemDetail problem = ProblemDetail.forStatus(
@@ -83,13 +90,15 @@ public class GlobalExceptionHandler {
         problem.setDetail(
                 "O método HTTP utilizado não é permitido para este recurso."
         );
+        problem.setInstance(getRequestUri(request));
 
         return problem;
     }
 
     @ExceptionHandler(NoResourceFoundException.class)
     public ProblemDetail handleResourceNotFound(
-            NoResourceFoundException exception
+            NoResourceFoundException exception,
+            HttpServletRequest request
     ) {
 
         ProblemDetail problem = ProblemDetail.forStatus(
@@ -100,13 +109,15 @@ public class GlobalExceptionHandler {
         problem.setDetail(
                 "O recurso solicitado não foi encontrado."
         );
+        problem.setInstance(getRequestUri(request));
 
         return problem;
     }
 
     @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
     public ProblemDetail handleUnsupportedMediaType(
-            HttpMediaTypeNotSupportedException exception
+            HttpMediaTypeNotSupportedException exception,
+            HttpServletRequest request
     ) {
 
         ProblemDetail problem = ProblemDetail.forStatus(
@@ -117,13 +128,15 @@ public class GlobalExceptionHandler {
         problem.setDetail(
                 "O tipo de conteúdo enviado não é suportado pela API."
         );
+        problem.setInstance(getRequestUri(request));
 
         return problem;
     }
 
     @ExceptionHandler(GeminiRateLimitException.class)
     public ProblemDetail handleGeminiRateLimit(
-            GeminiRateLimitException exception
+            GeminiRateLimitException exception,
+            HttpServletRequest request
     ) {
 
         ProblemDetail problem = ProblemDetail.forStatus(
@@ -134,13 +147,15 @@ public class GlobalExceptionHandler {
         problem.setDetail(
                 "A quantidade de requisições à Gemini excedeu o limite permitido."
         );
+        problem.setInstance(getRequestUri(request));
 
         return problem;
     }
 
     @ExceptionHandler(GeminiTimeoutException.class)
     public ProblemDetail handleGeminiTimeout(
-            GeminiTimeoutException exception
+            GeminiTimeoutException exception,
+            HttpServletRequest request
     ) {
 
         ProblemDetail problem = ProblemDetail.forStatus(
@@ -151,13 +166,15 @@ public class GlobalExceptionHandler {
         problem.setDetail(
                 "A Gemini demorou demais para responder."
         );
+        problem.setInstance(getRequestUri(request));
 
         return problem;
     }
 
     @ExceptionHandler(GeminiException.class)
     public ProblemDetail handleGeminiException(
-            GeminiException exception
+            GeminiException exception,
+            HttpServletRequest request
     ) {
 
         ProblemDetail problem = ProblemDetail.forStatus(
@@ -168,13 +185,15 @@ public class GlobalExceptionHandler {
         problem.setDetail(
                 "Não foi possível processar a síntese através da Gemini."
         );
+        problem.setInstance(getRequestUri(request));
 
         return problem;
     }
 
     @ExceptionHandler(Exception.class)
     public ProblemDetail handleUnexpectedException(
-            Exception exception
+            Exception exception,
+            HttpServletRequest request
     ) {
 
         ProblemDetail problem = ProblemDetail.forStatus(
@@ -185,7 +204,12 @@ public class GlobalExceptionHandler {
         problem.setDetail(
                 "Ocorreu um erro inesperado ao processar a requisição."
         );
+        problem.setInstance(getRequestUri(request));
 
         return problem;
+    }
+
+    private URI getRequestUri(HttpServletRequest request) {
+        return URI.create(request.getRequestURI());
     }
 }
