@@ -86,7 +86,6 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleGeminiException(
             GeminiException exception
     ) {
-
         ProblemDetail problem = ProblemDetail.forStatus(
                 HttpStatus.BAD_GATEWAY
         );

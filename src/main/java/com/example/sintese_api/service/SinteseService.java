@@ -1,5 +1,6 @@
 package com.example.sintese_api.service;
 
+import com.example.sintese_api.exception.GeminiException;
 import tools.jackson.databind.ObjectMapper;
 import com.example.sintese_api.client.GeminiClient;
 import com.example.sintese_api.config.SinteseConfig;
@@ -73,7 +74,7 @@ public class SinteseService {
                     SinteseResponse.class
             );
         } catch (Exception exception) {
-            throw new IllegalStateException(
+            throw new GeminiException(
                     "Não foi possível interpretar a resposta da Gemini.",
                     exception
             );
