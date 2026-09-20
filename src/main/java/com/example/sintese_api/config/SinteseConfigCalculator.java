@@ -1,9 +1,13 @@
 package com.example.sintese_api.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Component
 public class SinteseConfigCalculator {
+
+    @Value("${sintese.min-output-tokens-limit}")
+    private int maxOutputTokensMinimo;
 
     public SinteseConfig calcular(int quantidadePalavras) {
 
@@ -11,10 +15,11 @@ public class SinteseConfigCalculator {
          * Textos muito pequenos:
          * não faz sentido obrigar a IA a reduzir o conteúdo.
          */
+
         if (quantidadePalavras <= 60) {
 
             int maxOutputTokens = Math.max(
-                    100,
+                    maxOutputTokensMinimo,
                     (int) Math.ceil(quantidadePalavras * 1.6) + 20
             );
 
