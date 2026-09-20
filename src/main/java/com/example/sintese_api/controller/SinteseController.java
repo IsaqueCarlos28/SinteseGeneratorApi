@@ -1,6 +1,7 @@
 package com.example.sintese_api.controller;
 
 import com.example.sintese_api.client.GeminiClient;
+import com.example.sintese_api.prompt.SintesePromptLoader;
 import com.example.sintese_api.service.SinteseService;
 import com.example.sintese_api.dto.SinteseRequest;
 import com.example.sintese_api.dto.SinteseResponse;
@@ -45,6 +46,21 @@ public class SinteseController {
                     "Explique em uma frase o que é uma API REST.",
                     100
             );
+        }
+    }
+
+    @RestController
+    public class PromptTesteController {
+
+        private final SintesePromptLoader promptLoader;
+
+        public PromptTesteController(SintesePromptLoader promptLoader) {
+            this.promptLoader = promptLoader;
+        }
+
+        @GetMapping("/teste-prompt")
+        public String testarPrompt() {
+            return promptLoader.carregar();
         }
     }
 }
