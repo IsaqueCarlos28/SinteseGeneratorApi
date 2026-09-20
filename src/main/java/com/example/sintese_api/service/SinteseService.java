@@ -1,5 +1,6 @@
 package com.example.sintese_api.service;
 
+import tools.jackson.databind.ObjectMapper;
 import com.example.sintese_api.client.GeminiClient;
 import com.example.sintese_api.config.SinteseConfig;
 import com.example.sintese_api.config.SinteseConfigCalculator;
@@ -14,15 +15,18 @@ public class SinteseService {
     private final SinteseConfigCalculator configCalculator;
     private final SintesePromptLoader promptLoader;
     private final GeminiClient geminiClient;
+    private final ObjectMapper objectMapper;
 
     public SinteseService(
             SinteseConfigCalculator configCalculator,
             SintesePromptLoader promptLoader,
-            GeminiClient geminiClient
+            GeminiClient geminiClient,
+            ObjectMapper objectMapper
     ) {
         this.configCalculator = configCalculator;
         this.promptLoader = promptLoader;
         this.geminiClient = geminiClient;
+        this.objectMapper = objectMapper;
     }
 
     public SinteseResponse gerarSintese(SinteseRequest request) {
@@ -63,7 +67,17 @@ public class SinteseService {
                 config.maxOutputTokens()
         );
 
-        return new SinteseResponse(resposta);
+        try {
+            return objectMapper.readValue(
+                    resposta,
+                    SinteseResponse.class
+            );
+        } catch (Exception exception) {
+            throw new IllegalStateException(
+                    "Não foi possível interpretar a resposta da Gemini.",
+                    exception
+            );
+        }
     }
 
     private int contarPalavras(String texto) {
