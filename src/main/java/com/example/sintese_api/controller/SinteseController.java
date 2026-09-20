@@ -1,7 +1,5 @@
 package com.example.sintese_api.controller;
 
-import com.example.sintese_api.client.GeminiClient;
-import com.example.sintese_api.prompt.SintesePromptLoader;
 import com.example.sintese_api.service.SinteseService;
 import com.example.sintese_api.dto.SinteseRequest;
 import com.example.sintese_api.dto.SinteseResponse;
