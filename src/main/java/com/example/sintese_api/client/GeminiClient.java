@@ -1,12 +1,13 @@
 package com.example.sintese_api.client;
 
 import java.time.Duration;
-import org.springframework.http.client.JdkClientHttpRequestFactory;
+
 import com.example.sintese_api.exception.GeminiException;
 import com.example.sintese_api.exception.GeminiRateLimitException;
 import com.example.sintese_api.exception.GeminiTimeoutException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
@@ -17,16 +18,25 @@ public class GeminiClient {
     private final RestClient restClient;
     private final String apiKey;
     private final String model;
+    private final String apiRevision;
+    private final String thinkingLevel;
+    private final double temperature;
 
     public GeminiClient(
             @Value("${gemini.url}") String url,
             @Value("${gemini.api-key}") String apiKey,
-            @Value("${gemini.model}") String model
+            @Value("${gemini.model}") String model,
+            @Value("${gemini.api-revision}") String apiRevision,
+            @Value("${gemini.timeout-seconds}") int timeoutSeconds,
+            @Value("${gemini.thinking-level}") String thinkingLevel,
+            @Value("${gemini.temperature}") double temperature
     ) {
         JdkClientHttpRequestFactory requestFactory =
                 new JdkClientHttpRequestFactory();
 
-        requestFactory.setReadTimeout(Duration.ofSeconds(15));
+        requestFactory.setReadTimeout(
+                Duration.ofSeconds(timeoutSeconds)
+        );
 
         this.restClient = RestClient.builder()
                 .baseUrl(url)
@@ -35,6 +45,9 @@ public class GeminiClient {
 
         this.apiKey = apiKey;
         this.model = model;
+        this.apiRevision = apiRevision;
+        this.thinkingLevel = thinkingLevel;
+        this.temperature = temperature;
     }
 
     public String gerarSintese(
@@ -48,8 +61,8 @@ public class GeminiClient {
                 systemInstruction,
                 input,
                 new GenerationConfig(
-                        "low",
-                        0.1,
+                        thinkingLevel,
+                        temperature,
                         maxOutputTokens
                 ),
                 criarResponseFormat()
@@ -59,8 +72,7 @@ public class GeminiClient {
 
             GeminiResponse response = restClient.post()
                     .header("x-goog-api-key", apiKey)
-                    .header("Content-Type", "application/json")
-                    .header("Api-Revision", "2026-05-20")
+                    .header("Api-Revision", apiRevision)
                     .body(request)
                     .retrieve()
                     .onStatus(
