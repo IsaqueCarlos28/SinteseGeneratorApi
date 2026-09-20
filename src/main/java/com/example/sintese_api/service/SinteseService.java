@@ -1,5 +1,6 @@
 package com.example.sintese_api.service;
 
+import com.example.sintese_api.client.GeminiClient;
 import com.example.sintese_api.config.SinteseConfig;
 import com.example.sintese_api.config.SinteseConfigCalculator;
 import com.example.sintese_api.dto.SinteseRequest;
@@ -12,13 +13,16 @@ public class SinteseService {
 
     private final SinteseConfigCalculator configCalculator;
     private final SintesePromptLoader promptLoader;
+    private final GeminiClient geminiClient;
 
     public SinteseService(
             SinteseConfigCalculator configCalculator,
-            SintesePromptLoader promptLoader
+            SintesePromptLoader promptLoader,
+            GeminiClient geminiClient
     ) {
         this.configCalculator = configCalculator;
         this.promptLoader = promptLoader;
+        this.geminiClient = geminiClient;
     }
 
     public SinteseResponse gerarSintese(SinteseRequest request) {
@@ -53,12 +57,13 @@ public class SinteseService {
 
         String input = documentos;
 
-        return new SinteseResponse(
-                "Prompt:\n\n"
-                        + prompt
-                        + "\n\nInput:\n\n"
-                        + input
+        String resposta = geminiClient.gerarSintese(
+                prompt,
+                input,
+                config.maxOutputTokens()
         );
+
+        return new SinteseResponse(resposta);
     }
 
     private int contarPalavras(String texto) {
