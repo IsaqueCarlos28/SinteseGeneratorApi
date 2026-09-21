@@ -94,42 +94,46 @@ public class SinteseController {
                                     @ExampleObject(
                                             name = "Documento vazio",
                                             value = """
-                                                    {
-                                                      "detail": "O conteúdo do documento não pode ser vazio",
-                                                      "status": 400,
-                                                      "title": "Requisição inválida"
-                                                    }
-                                                    """
+                                        {
+                                          "detail": "O conteúdo do documento não pode ser vazio",
+                                          "instance": "/api/sinteses",
+                                          "status": 400,
+                                          "title": "Requisição inválida"
+                                        }
+                                        """
                                     ),
                                     @ExampleObject(
                                             name = "Lista de documentos vazia",
                                             value = """
-                                                    {
-                                                      "detail": "A lista de documentos não pode ser vazia",
-                                                      "status": 400,
-                                                      "title": "Requisição inválida"
-                                                    }
-                                                    """
+                                        {
+                                          "detail": "A lista de documentos não pode ser vazia",
+                                          "instance": "/api/sinteses",
+                                          "status": 400,
+                                          "title": "Requisição inválida"
+                                        }
+                                        """
                                     ),
                                     @ExampleObject(
                                             name = "JSON inválido",
                                             value = """
-                                                    {
-                                                      "detail": "O corpo da requisição não possui um formato JSON válido.",
-                                                      "status": 400,
-                                                      "title": "JSON inválido"
-                                                    }
-                                                    """
+                                        {
+                                          "detail": "O corpo da requisição não possui um formato JSON válido.",
+                                          "instance": "/api/sinteses",
+                                          "status": 400,
+                                          "title": "JSON inválido"
+                                        }
+                                        """
                                     ),
                                     @ExampleObject(
                                             name = "Entrada muito grande",
                                             value = """
-                                                    {
-                                                      "detail": "A quantidade total de palavras dos documentos excede o limite permitido. Quantidade recebida: 50001. Limite: 50000.",
-                                                      "status": 400,
-                                                      "title": "Entrada muito grande"
-                                                    }
-                                                    """
+                                        {
+                                          "detail": "A quantidade total de palavras dos documentos excede o limite permitido. Quantidade recebida: 50001. Limite: 50000.",
+                                          "instance": "/api/sinteses",
+                                          "status": 400,
+                                          "title": "Entrada muito grande"
+                                        }
+                                        """
                                     )
                             }
                     )
@@ -142,12 +146,13 @@ public class SinteseController {
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
                             examples = @ExampleObject(
                                     value = """
-                                            {
-                                              "detail": "O recurso solicitado não foi encontrado.",
-                                              "status": 404,
-                                              "title": "Recurso não encontrado"
-                                            }
-                                            """
+                                {
+                                  "detail": "O recurso solicitado não foi encontrado.",
+                                  "instance": "/api/sinteses",
+                                  "status": 404,
+                                  "title": "Recurso não encontrado"
+                                }
+                                """
                             )
                     )
             ),
@@ -159,12 +164,13 @@ public class SinteseController {
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
                             examples = @ExampleObject(
                                     value = """
-                                            {
-                                              "detail": "O método HTTP utilizado não é permitido para este recurso.",
-                                              "status": 405,
-                                              "title": "Método não permitido"
-                                            }
-                                            """
+                                {
+                                  "detail": "O método HTTP utilizado não é permitido para este recurso.",
+                                  "instance": "/api/sinteses",
+                                  "status": 405,
+                                  "title": "Método não permitido"
+                                }
+                                """
                             )
                     )
             ),
@@ -176,12 +182,13 @@ public class SinteseController {
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
                             examples = @ExampleObject(
                                     value = """
-                                            {
-                                              "detail": "O tipo de conteúdo enviado não é suportado pela API.",
-                                              "status": 415,
-                                              "title": "Tipo de conteúdo não suportado"
-                                            }
-                                            """
+                                {
+                                  "detail": "O tipo de conteúdo enviado não é suportado pela API.",
+                                  "instance": "/api/sinteses",
+                                  "status": 415,
+                                  "title": "Tipo de conteúdo não suportado"
+                                }
+                                """
                             )
                     )
             ),
