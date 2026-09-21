@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 public class SinteseConfigCalculator {
 
     @Value("${sintese.min-output-tokens-limit}")
-    private int maxOutputTokensMinimo;
+    private int minOutputTokensLimit;
 
     public SinteseConfig calcular(int quantidadePalavras) {
 
@@ -19,7 +19,7 @@ public class SinteseConfigCalculator {
         if (quantidadePalavras <= 60) {
 
             int maxOutputTokens = Math.max(
-                    maxOutputTokensMinimo,
+                    minOutputTokensLimit,
                     (int) Math.ceil(quantidadePalavras * 1.6) + 20
             );
 
