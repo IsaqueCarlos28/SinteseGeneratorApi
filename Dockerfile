@@ -19,6 +19,8 @@ RUN ./mvnw clean package -DskipTests
 # Etapa de execução
 FROM eclipse-temurin:25-jre
 
+LABEL org.opencontainers.image.source="https://github.com/IsaqueCarlos28/SinteseGeneratorApi"
+
 WORKDIR /app
 
 COPY --from=build /app/target/sintese-api-0.0.1-SNAPSHOT.jar app.jar
