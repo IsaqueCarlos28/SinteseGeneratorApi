@@ -3,6 +3,7 @@ package com.example.sintese_api.client;
 import java.time.Duration;
 
 import com.example.sintese_api.exception.GeminiException;
+import com.example.sintese_api.exception.GeminiIndisponivelException;
 import com.example.sintese_api.exception.GeminiRateLimitException;
 import com.example.sintese_api.exception.GeminiTimeoutException;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,6 +22,15 @@ public class GeminiClient {
     private final String apiRevision;
     private final String thinkingLevel;
     private final double temperature;
+
+    private static final org.slf4j.Logger log =
+            org.slf4j.LoggerFactory.getLogger(GeminiClient.class);
+
+    @Value("${gemini.max-retries:2}")
+    private int maxRetries;
+
+    @Value("${gemini.retry-backoff-ms:1000}")
+    private long retryBackoffMs;
 
     public GeminiClient(
             @Value("${gemini.url}") String url,
@@ -50,24 +60,39 @@ public class GeminiClient {
         this.temperature = temperature;
     }
 
-    public String gerarSintese(
-            String systemInstruction,
-            String input,
-            int maxOutputTokens
-    ) {
+    public String gerarSintese(String systemInstruction, String input, int maxOutputTokens) {
 
         GeminiRequest request = new GeminiRequest(
                 model,
                 systemInstruction,
                 input,
-                new GenerationConfig(
-                        thinkingLevel,
-                        temperature,
-                        maxOutputTokens
-                ),
+                new GenerationConfig(thinkingLevel, temperature, maxOutputTokens),
                 criarResponseFormat()
         );
 
+        int tentativa = 0;
+
+        while (true) {
+            try {
+                return chamar(request);
+            } catch (GeminiIndisponivelException exception) {
+
+                if (tentativa >= maxRetries) {
+                    throw exception;
+                }
+
+                long espera = retryBackoffMs * (1L << tentativa);
+                tentativa++;
+
+                log.warn("Gemini indisponível (503). Tentativa {}/{} falhou; nova tentativa em {} ms.",
+                        tentativa, maxRetries + 1, espera);
+
+                dormir(espera);
+            }
+        }
+    }
+
+    private String chamar(GeminiRequest request) {
         try {
 
             GeminiResponse response = restClient.post()
@@ -77,16 +102,25 @@ public class GeminiClient {
                     .retrieve()
                     .onStatus(
                             status -> status.value() == 429,
-                            (request1, response1) -> {
-                                throw new GeminiRateLimitException();
+                            (req, res) -> { throw new GeminiRateLimitException(); }
+                    )
+                    .onStatus(
+                            status -> status.value() == 503,
+                            (req, res) -> {
+                                throw new GeminiIndisponivelException(
+                                        "A Gemini está indisponível (503).",
+                                        503,
+                                        lerCorpo(res)
+                                );
                             }
                     )
                     .onStatus(
                             HttpStatusCode::isError,
-                            (request1, response1) -> {
+                            (req, res) -> {
                                 throw new GeminiException(
-                                        "A Gemini retornou um erro HTTP: "
-                                                + response1.getStatusCode()
+                                        "A Gemini retornou um erro HTTP: " + res.getStatusCode(),
+                                        res.getStatusCode().value(),
+                                        lerCorpo(res)
                                 );
                             }
                     )
@@ -95,22 +129,24 @@ public class GeminiClient {
             return extrairTexto(response);
 
         } catch (ResourceAccessException exception) {
-
-            throw new GeminiTimeoutException(
-                    "Não foi possível obter resposta da Gemini.",
-                    exception
-            );
-
+            throw new GeminiTimeoutException("Não foi possível obter resposta da Gemini.", exception);
         } catch (GeminiRateLimitException | GeminiException exception) {
-
             throw exception;
-
         } catch (Exception exception) {
+            throw new GeminiException("Erro ao processar a resposta da Gemini.", exception);
+        }
+    }
 
-            throw new GeminiException(
-                    "Erro ao processar a resposta da Gemini.",
-                    exception
-            );
+    private String lerCorpo(org.springframework.http.client.ClientHttpResponse res) throws java.io.IOException {
+        return new String(res.getBody().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+    }
+
+    private void dormir(long ms) {
+        try {
+            Thread.sleep(ms);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new GeminiException("Interrompido durante nova tentativa.", e);
         }
     }
 

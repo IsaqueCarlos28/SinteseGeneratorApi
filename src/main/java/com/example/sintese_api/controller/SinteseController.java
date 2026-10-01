@@ -4,6 +4,7 @@ import com.example.sintese_api.dto.SinteseRequest;
 import com.example.sintese_api.dto.SinteseResponse;
 import com.example.sintese_api.service.SinteseService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -13,8 +14,18 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * Gera sínteses a partir de textos enviados em JSON.
+ * <p>
+ * Para enviar arquivos (.txt, .pdf e .docx), use o endpoint
+ * {@code POST /api/sinteses/documentos}, que reaproveita o mesmo
+ * {@link SinteseService}.
+ */
 @RestController
 @RequestMapping("/api/sinteses")
 @Tag(
@@ -30,13 +41,30 @@ public class SinteseController {
     }
 
     @Operation(
-            summary = "Gera uma síntese integrada",
+            summary = "Gera uma síntese integrada a partir de textos",
             description = """
-                    Recebe um ou mais documentos e utiliza inteligência artificial
-                    para gerar uma única síntese integrada em português do Brasil.
+                    Recebe um ou mais documentos em formato textual (JSON) e utiliza \
+                    inteligência artificial para gerar **uma única síntese integrada** \
+                    em português do Brasil.
 
-                    A quantidade total de palavras dos documentos não pode
-                    ultrapassar o limite configurado pela aplicação.
+                    **Regras de entrada**
+
+                    - É necessário enviar pelo menos um documento.
+                    - O conteúdo de cada documento não pode ser vazio.
+                    - A soma das palavras de todos os documentos não pode ultrapassar \
+                    **50.000 palavras**. Essa validação ocorre antes de qualquer \
+                    chamada à Gemini.
+
+                    **Observações**
+
+                    - Quando há vários documentos, eles são combinados em uma única \
+                    síntese; a API nunca devolve um resumo separado por documento.
+                    - O tamanho da síntese é calculado automaticamente de acordo com \
+                    a quantidade de palavras recebida.
+                    - Se a Gemini estiver sobrecarregada, a API tenta novamente \
+                    automaticamente antes de responder `503`.
+                    - Para enviar arquivos `.txt`, `.pdf` ou `.docx`, utilize \
+                    `POST /api/sinteses/documentos`.
                     """
     )
     @io.swagger.v3.oas.annotations.parameters.RequestBody(
@@ -87,53 +115,53 @@ public class SinteseController {
 
             @ApiResponse(
                     responseCode = "400",
-                    description = "Dados da requisição inválidos ou quantidade de palavras acima do limite permitido",
+                    description = "Dados da requisição inválidos, JSON malformado ou quantidade de palavras acima do limite permitido",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
                             examples = {
                                     @ExampleObject(
                                             name = "Documento vazio",
                                             value = """
-                                        {
-                                          "detail": "O conteúdo do documento não pode ser vazio",
-                                          "instance": "/api/sinteses",
-                                          "status": 400,
-                                          "title": "Requisição inválida"
-                                        }
-                                        """
+                                                    {
+                                                      "detail": "O conteúdo do documento não pode ser vazio",
+                                                      "instance": "/api/sinteses",
+                                                      "status": 400,
+                                                      "title": "Requisição inválida"
+                                                    }
+                                                    """
                                     ),
                                     @ExampleObject(
                                             name = "Lista de documentos vazia",
                                             value = """
-                                        {
-                                          "detail": "A lista de documentos não pode ser vazia",
-                                          "instance": "/api/sinteses",
-                                          "status": 400,
-                                          "title": "Requisição inválida"
-                                        }
-                                        """
+                                                    {
+                                                      "detail": "A lista de documentos não pode ser vazia",
+                                                      "instance": "/api/sinteses",
+                                                      "status": 400,
+                                                      "title": "Requisição inválida"
+                                                    }
+                                                    """
                                     ),
                                     @ExampleObject(
                                             name = "JSON inválido",
                                             value = """
-                                        {
-                                          "detail": "O corpo da requisição não possui um formato JSON válido.",
-                                          "instance": "/api/sinteses",
-                                          "status": 400,
-                                          "title": "JSON inválido"
-                                        }
-                                        """
+                                                    {
+                                                      "detail": "O corpo da requisição não possui um formato JSON válido.",
+                                                      "instance": "/api/sinteses",
+                                                      "status": 400,
+                                                      "title": "JSON inválido"
+                                                    }
+                                                    """
                                     ),
                                     @ExampleObject(
                                             name = "Entrada muito grande",
                                             value = """
-                                        {
-                                          "detail": "A quantidade total de palavras dos documentos excede o limite permitido. Quantidade recebida: 50001. Limite: 50000.",
-                                          "instance": "/api/sinteses",
-                                          "status": 400,
-                                          "title": "Entrada muito grande"
-                                        }
-                                        """
+                                                    {
+                                                      "detail": "A quantidade total de palavras dos documentos excede o limite permitido. Quantidade recebida: 50001. Limite: 50000.",
+                                                      "instance": "/api/sinteses",
+                                                      "status": 400,
+                                                      "title": "Entrada muito grande"
+                                                    }
+                                                    """
                                     )
                             }
                     )
@@ -146,13 +174,13 @@ public class SinteseController {
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
                             examples = @ExampleObject(
                                     value = """
-                                {
-                                  "detail": "O recurso solicitado não foi encontrado.",
-                                  "instance": "/api/sinteses",
-                                  "status": 404,
-                                  "title": "Recurso não encontrado"
-                                }
-                                """
+                                            {
+                                              "detail": "O recurso solicitado não foi encontrado.",
+                                              "instance": "/api/sinteses",
+                                              "status": 404,
+                                              "title": "Recurso não encontrado"
+                                            }
+                                            """
                             )
                     )
             ),
@@ -164,31 +192,31 @@ public class SinteseController {
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
                             examples = @ExampleObject(
                                     value = """
-                                {
-                                  "detail": "O método HTTP utilizado não é permitido para este recurso.",
-                                  "instance": "/api/sinteses",
-                                  "status": 405,
-                                  "title": "Método não permitido"
-                                }
-                                """
+                                            {
+                                              "detail": "O método HTTP utilizado não é permitido para este recurso.",
+                                              "instance": "/api/sinteses",
+                                              "status": 405,
+                                              "title": "Método não permitido"
+                                            }
+                                            """
                             )
                     )
             ),
 
             @ApiResponse(
                     responseCode = "415",
-                    description = "Tipo de conteúdo enviado não é suportado",
+                    description = "Tipo de conteúdo enviado não é suportado (este endpoint aceita apenas application/json)",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
                             examples = @ExampleObject(
                                     value = """
-                                {
-                                  "detail": "O tipo de conteúdo enviado não é suportado pela API.",
-                                  "instance": "/api/sinteses",
-                                  "status": 415,
-                                  "title": "Tipo de conteúdo não suportado"
-                                }
-                                """
+                                            {
+                                              "detail": "O tipo de conteúdo enviado não é suportado pela API.",
+                                              "instance": "/api/sinteses",
+                                              "status": 415,
+                                              "title": "Tipo de conteúdo não suportado"
+                                            }
+                                            """
                             )
                     )
             ),
@@ -220,6 +248,7 @@ public class SinteseController {
                                     value = """
                                             {
                                               "detail": "Ocorreu um erro inesperado ao processar a requisição.",
+                                              "instance": "/api/sinteses",
                                               "status": 500,
                                               "title": "Erro interno do servidor"
                                             }
@@ -230,7 +259,7 @@ public class SinteseController {
 
             @ApiResponse(
                     responseCode = "502",
-                    description = "Erro ao processar a requisição através da Gemini",
+                    description = "Erro ao processar a requisição através da Gemini (por exemplo, resposta inválida ou erro retornado pelo provedor)",
                     content = @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
                             examples = @ExampleObject(
@@ -240,6 +269,31 @@ public class SinteseController {
                                               "instance": "/api/sinteses",
                                               "status": 502,
                                               "title": "Erro na Gemini"
+                                            }
+                                            """
+                            )
+                    )
+            ),
+
+            @ApiResponse(
+                    responseCode = "503",
+                    description = "Gemini temporariamente indisponível (alta demanda). "
+                            + "A API já tentou novamente automaticamente; "
+                            + "tente de novo após o intervalo indicado no header `Retry-After`.",
+                    headers = @Header(
+                            name = "Retry-After",
+                            description = "Tempo sugerido de espera, em segundos, antes de tentar novamente",
+                            schema = @Schema(type = "integer", example = "30")
+                    ),
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            examples = @ExampleObject(
+                                    value = """
+                                            {
+                                              "detail": "A Gemini está com alta demanda no momento. Tente novamente em instantes.",
+                                              "instance": "/api/sinteses",
+                                              "status": 503,
+                                              "title": "Gemini indisponível"
                                             }
                                             """
                             )

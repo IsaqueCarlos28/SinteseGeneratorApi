@@ -1,8 +1,10 @@
 package com.example.sintese_api.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -17,6 +19,38 @@ import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final org.slf4j.Logger log =
+            org.slf4j.LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    @org.springframework.beans.factory.annotation.Value("${app.expose-errors:false}")
+    private boolean exposeErrors;
+
+    private void anexarDiagnostico(ProblemDetail problem, Throwable exception) {
+        if (!exposeErrors) {
+            return;
+        }
+
+        problem.setProperty("causa", exception.getMessage());
+
+        if (exception instanceof GeminiException gemini) {
+            if (gemini.getUpstreamStatus() != null) {
+                problem.setProperty("geminiStatus", gemini.getUpstreamStatus());
+            }
+            if (gemini.getUpstreamBody() != null) {
+                problem.setProperty("geminiResposta", gemini.getUpstreamBody());
+            }
+        }
+
+        Throwable raiz = exception;
+        while (raiz.getCause() != null && raiz.getCause() != raiz) {
+            raiz = raiz.getCause();
+        }
+        if (raiz != exception) {
+            problem.setProperty("causaRaiz",
+                    raiz.getClass().getSimpleName() + ": " + raiz.getMessage());
+        }
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ProblemDetail handleValidationException(
@@ -247,41 +281,53 @@ public class GlobalExceptionHandler {
         return problem;
     }
 
-    @ExceptionHandler(GeminiException.class)
-    public ProblemDetail handleGeminiException(
-            GeminiException exception,
+    @ExceptionHandler(GeminiIndisponivelException.class)
+    public ResponseEntity<ProblemDetail> handleGeminiIndisponivel(
+            GeminiIndisponivelException exception,
             HttpServletRequest request
     ) {
 
-        ProblemDetail problem = ProblemDetail.forStatus(
-                HttpStatus.BAD_GATEWAY
-        );
+        log.warn("Gemini indisponível após todas as tentativas: {}", exception.getUpstreamBody());
 
-        problem.setTitle("Erro na Gemini");
-        problem.setDetail(
-                "Não foi possível processar a síntese através da Gemini."
-        );
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.SERVICE_UNAVAILABLE);
+        problem.setTitle("Gemini indisponível");
+        problem.setDetail("A Gemini está com alta demanda no momento. Tente novamente em instantes.");
         problem.setInstance(getRequestUri(request));
+        anexarDiagnostico(problem, exception);
 
+        return ResponseEntity
+                .status(HttpStatus.SERVICE_UNAVAILABLE)
+                .header(HttpHeaders.RETRY_AFTER, "30")
+                .body(problem);
+    }
+
+    @ExceptionHandler(GeminiException.class)
+    public ProblemDetail handleGeminiException(GeminiException exception, HttpServletRequest request) {
+
+        log.error("Falha na Gemini: {} | status={} | corpo={}",
+                exception.getMessage(), exception.getUpstreamStatus(),
+                exception.getUpstreamBody(), exception);
+
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_GATEWAY);
+        problem.setTitle("Erro na Gemini");
+        problem.setDetail("Não foi possível processar a síntese através da Gemini.");
+        problem.setInstance(getRequestUri(request));
+        anexarDiagnostico(problem, exception);
         return problem;
     }
 
+
+
     @ExceptionHandler(Exception.class)
-    public ProblemDetail handleUnexpectedException(
-            Exception exception,
-            HttpServletRequest request
-    ) {
+    public ProblemDetail handleUnexpectedException(Exception exception, HttpServletRequest request) {
 
-        ProblemDetail problem = ProblemDetail.forStatus(
-                HttpStatus.INTERNAL_SERVER_ERROR
-        );
+        log.error("Erro inesperado em {}", request.getRequestURI(), exception);
 
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
         problem.setTitle("Erro interno do servidor");
-        problem.setDetail(
-                "Ocorreu um erro inesperado ao processar a requisição."
-        );
+        problem.setDetail("Ocorreu um erro inesperado ao processar a requisição.");
         problem.setInstance(getRequestUri(request));
-
+        anexarDiagnostico(problem, exception);
         return problem;
     }
 
