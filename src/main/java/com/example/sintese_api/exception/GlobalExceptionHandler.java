@@ -9,6 +9,7 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.net.URI;
@@ -70,6 +71,81 @@ public class GlobalExceptionHandler {
         );
 
         problem.setTitle("Entrada muito grande");
+        problem.setDetail(exception.getMessage());
+        problem.setInstance(getRequestUri(request));
+
+        return problem;
+    }
+
+    @ExceptionHandler(ArquivoInvalidoException.class)
+    public ProblemDetail handleArquivoInvalido(
+            ArquivoInvalidoException exception,
+            HttpServletRequest request
+    ) {
+
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+
+        problem.setTitle("Arquivo inválido");
+        problem.setDetail(exception.getMessage());
+        problem.setInstance(getRequestUri(request));
+
+        return problem;
+    }
+
+    @ExceptionHandler(ArquivoMuitoGrandeException.class)
+    public ProblemDetail handleArquivoMuitoGrande(
+            ArquivoMuitoGrandeException exception,
+            HttpServletRequest request
+    ) {
+
+        ProblemDetail problem = ProblemDetail.forStatus(413);
+
+        problem.setTitle("Arquivo muito grande");
+        problem.setDetail(exception.getMessage());
+        problem.setInstance(getRequestUri(request));
+
+        return problem;
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ProblemDetail handleUploadMuitoGrande(
+            MaxUploadSizeExceededException exception,
+            HttpServletRequest request
+    ) {
+
+        ProblemDetail problem = ProblemDetail.forStatus(413);
+
+        problem.setTitle("Arquivo muito grande");
+        problem.setDetail("O arquivo ou a requisição excede o tamanho máximo permitido.");
+        problem.setInstance(getRequestUri(request));
+
+        return problem;
+    }
+
+    @ExceptionHandler(TipoArquivoNaoSuportadoException.class)
+    public ProblemDetail handleTipoArquivoNaoSuportado(
+            TipoArquivoNaoSuportadoException exception,
+            HttpServletRequest request
+    ) {
+
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+
+        problem.setTitle("Tipo de arquivo não suportado");
+        problem.setDetail(exception.getMessage());
+        problem.setInstance(getRequestUri(request));
+
+        return problem;
+    }
+
+    @ExceptionHandler(DocumentoNaoProcessavelException.class)
+    public ProblemDetail handleDocumentoNaoProcessavel(
+            DocumentoNaoProcessavelException exception,
+            HttpServletRequest request
+    ) {
+
+        ProblemDetail problem = ProblemDetail.forStatus(422);
+
+        problem.setTitle("Documento não processável");
         problem.setDetail(exception.getMessage());
         problem.setInstance(getRequestUri(request));
 
