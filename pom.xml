@@ -28,8 +28,8 @@
 	</scm>
 	<properties>
 		<java.version>25</java.version>
-		<pdfbox.version>3.0.8</pdfbox.version>
-		<poi.version>5.5.1</poi.version>
+		<pdfbox.version>3.0.8</pdfbox.version>   <!-- NOVO -->
+		<poi.version>5.5.1</poi.version>         <!-- NOVO -->
 	</properties>
 	<dependencies>
 		<dependency>
@@ -56,11 +56,13 @@
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<!-- NOVO: leitura de PDF -->
 		<dependency>
 			<groupId>org.apache.pdfbox</groupId>
 			<artifactId>pdfbox</artifactId>
 			<version>${pdfbox.version}</version>
 		</dependency>
+		<!-- NOVO: leitura de DOCX -->
 		<dependency>
 			<groupId>org.apache.poi</groupId>
 			<artifactId>poi-ooxml</artifactId>
