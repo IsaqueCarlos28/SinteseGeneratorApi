@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Síntese API - Gerador de Sínteses</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <p class="eyebrow">Projeto didático · Spring Boot + Gemini</p>
+      <h1>Gerador de Sínteses Integradas</h1>
+      <p class="lead">
+        Envie textos ou arquivos e receba uma única síntese em português do Brasil.
+        A API usa apenas as informações enviadas, sem adicionar conteúdo externo.
+      </p>
+      <div class="hero-links">
+        <a class="link-chip" href="/swagger-ui.html" target="_blank" rel="noopener noreferrer">Swagger UI</a>
+        <a class="link-chip" href="/v3/api-docs" target="_blank" rel="noopener noreferrer">OpenAPI</a>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="card" aria-labelledby="entrada-titulo">
+        <div class="card-header">
+          <div>
+            <p class="section-kicker">Entrada</p>
+            <h2 id="entrada-titulo">Escolha como enviar o conteúdo</h2>
+          </div>
+        </div>
+
+        <div class="tabs" role="tablist" aria-label="Modo de entrada">
+          <button
+            id="tab-texto"
+            class="tab active"
+            role="tab"
+            aria-selected="true"
+            aria-controls="panel-texto"
+            data-tab="texto"
+            type="button"
+          >
+            Texto
+          </button>
+          <button
+            id="tab-arquivos"
+            class="tab"
+            role="tab"
+            aria-selected="false"
+            aria-controls="panel-arquivos"
+            data-tab="arquivos"
+            type="button"
+          >
+            Arquivos
+          </button>
+        </div>
+
+        <div id="panel-texto" class="tab-panel active" role="tabpanel" aria-labelledby="tab-texto">
+          <div class="panel-intro">
+            <p>Digite um ou mais documentos. Eles serão combinados em uma única síntese integrada.</p>
+            <p class="muted">Endpoint: <code>POST /api/sinteses</code></p>
+          </div>
+
+          <div id="text-documents" class="documents" aria-live="polite"></div>
+
+          <div class="panel-actions">
+            <button id="add-document" class="btn btn-secondary" type="button">+ Adicionar documento</button>
+            <p id="text-word-count" class="counter">Total estimado: 0 palavras</p>
+          </div>
+
+          <div class="limits-box">
+            <strong>Regras</strong>
+            <ul>
+              <li>Envie pelo menos um documento.</li>
+              <li>O conteúdo não pode ficar vazio.</li>
+              <li>Limite total: <strong>50.000 palavras</strong> (soma de todos os documentos).</li>
+            </ul>
+          </div>
+        </div>
+
+        <div id="panel-arquivos" class="tab-panel" role="tabpanel" aria-labelledby="tab-arquivos" hidden>
+          <div class="panel-intro">
+            <p>Envie arquivos para extração de texto e geração da síntese.</p>
+            <p class="muted">Endpoint: <code>POST /api/sinteses/documentos</code></p>
+          </div>
+
+          <label class="file-drop" for="file-input">
+            <span class="file-drop-title">Selecione os arquivos</span>
+            <span class="file-drop-text">Formatos aceitos: .txt, .pdf, .docx</span>
+            <input
+              id="file-input"
+              class="file-input"
+              type="file"
+              multiple
+              accept=".txt,.pdf,.docx,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            >
+          </label>
+
+          <div id="file-list" class="file-list" aria-live="polite">
+            <p class="empty-state">Nenhum arquivo selecionado.</p>
+          </div>
+
+          <div class="limits-box">
+            <strong>Limites e observações</strong>
+            <ul>
+              <li>Formatos aceitos: <strong>.txt, .pdf, .docx</strong>.</li>
+              <li>Cada arquivo: até <strong>10 MB</strong>. Requisição: até <strong>30 MB</strong>.</li>
+              <li>O texto extraído de todos os arquivos pode ter até <strong>50.000 palavras</strong>.</li>
+              <li>PDFs digitalizados/imagens não são suportados (sem OCR).</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="submit-row">
+          <button id="submit-btn" class="btn btn-primary" type="button">Gerar síntese</button>
+          <button id="clear-btn" class="btn btn-ghost" type="button">Limpar</button>
+        </div>
+
+        <div id="status" class="status" role="status" aria-live="polite"></div>
+      </section>
+
+      <section class="card" aria-labelledby="resultado-titulo">
+        <div class="card-header result-header">
+          <div>
+            <p class="section-kicker">Saída</p>
+            <h2 id="resultado-titulo">Síntese gerada</h2>
+          </div>
+          <button id="copy-btn" class="btn btn-secondary btn-small" type="button" disabled>Copiar</button>
+        </div>
+
+        <div id="result-box" class="result-box">
+          <p class="empty-state">A síntese aparecerá aqui após o envio.</p>
+        </div>
+
+        <div id="error-box" class="error-box" aria-live="assertive" hidden></div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>
+        Dica: para testar a API sem interface, use o
+        <a href="/swagger-ui.html" target="_blank" rel="noopener noreferrer">Swagger UI</a>.
+      </p>
+    </footer>
+  </div>
+</body>
+</html>
