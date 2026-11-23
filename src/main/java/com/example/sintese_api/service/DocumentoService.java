@@ -15,7 +15,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Locale;
-import java.util.regex.Pattern;
 
 /**
  * Transforma arquivos enviados em {@link DocumentoRequest}, o mesmo modelo
@@ -34,29 +33,18 @@ public class DocumentoService {
 
     private static final String OCTET_STREAM = "application/octet-stream";
 
-    /**
-     * O prompt trata como dado tudo que estiver dentro de <documento>.
-     * Um arquivo que contenha "</documento>" poderia fechar a tag e fazer
-     * o resto do texto parecer instrução; por isso essas tags são removidas.
-     */
-    private static final Pattern TAG_DOCUMENTO =
-            Pattern.compile("(?i)<\\s*/?\\s*documento\\b[^>]*>");
-
-    private static final Pattern CARACTERES_DE_CONTROLE =
-            Pattern.compile("[\\p{Cntrl}&&[^\\n\\t]]");
-
-    private static final Pattern LINHAS_EM_BRANCO_EXCESSIVAS =
-            Pattern.compile("\\n{3,}");
-
     private final List<DocumentoExtractor> extractors;
     private final DataSize tamanhoMaximo;
+    private final DocumentoTextoNormalizador normalizador;
 
     public DocumentoService(
             List<DocumentoExtractor> extractors,
-            @Value("${app.upload.max-file-size}") DataSize tamanhoMaximo
+            @Value("${app.upload.max-file-size}") DataSize tamanhoMaximo,
+            DocumentoTextoNormalizador normalizador
     ) {
         this.extractors = extractors;
         this.tamanhoMaximo = tamanhoMaximo;
+        this.normalizador = normalizador;
     }
 
     public List<DocumentoRequest> extrairDocumentos(
@@ -169,7 +157,7 @@ public class DocumentoService {
 
     private String validarENormalizar(String texto, String nome) {
 
-        String normalizado = normalizar(texto);
+        String normalizado = normalizador.normalizar(texto);
 
         if (normalizado.isBlank()) {
             throw new DocumentoNaoProcessavelException(
@@ -180,29 +168,6 @@ public class DocumentoService {
         }
 
         return normalizado;
-    }
-
-    private String normalizar(String texto) {
-
-        if (texto == null) {
-            return "";
-        }
-
-        String resultado = texto
-                .replace("\uFEFF", "")
-                .replace("\r\n", "\n")
-                .replace('\r', '\n');
-
-        resultado = CARACTERES_DE_CONTROLE
-                .matcher(resultado).replaceAll("");
-
-        resultado = TAG_DOCUMENTO
-                .matcher(resultado).replaceAll("[tag removida]");
-
-        resultado = LINHAS_EM_BRANCO_EXCESSIVAS
-                .matcher(resultado).replaceAll("\n\n");
-
-        return resultado.trim();
     }
 
     private String normalizarContentType(String contentType) {
