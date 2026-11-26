@@ -16,8 +16,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class RateLimitFilterTest {
 
@@ -92,9 +91,9 @@ class RateLimitFilterTest {
     }
 
     @Test
-    void naoDeveConfiarEmXForwardedForEnviadoPeloCliente() throws ServletException, IOException {
+    void naoDeveConfiarEmXForwardedForSemProxyConfiavel() throws ServletException, IOException {
         AtomicLong agora = new AtomicLong(1_000);
-        RateLimitFilter filter = new RateLimitFilter(objectMapper, true, 1, 60, agora::get);
+        RateLimitFilter filter = new RateLimitFilter(objectMapper, true, 1, 60, "", agora::get);
 
         MockHttpServletRequest primeira = requisicao("10.0.0.1");
         primeira.addHeader("X-Forwarded-For", "1.2.3.4");
@@ -109,27 +108,112 @@ class RateLimitFilterTest {
     }
 
     @Test
-    void deveRemoverJanelasExpiradasSemCorromperContadoresAtivos() throws ServletException, IOException {
+    void deveUsarXForwardedForApenasComProxyConfiavel() throws ServletException, IOException {
         AtomicLong agora = new AtomicLong(1_000);
-        RateLimitFilter filter = new RateLimitFilter(objectMapper, true, 2, 60, agora::get);
+        RateLimitFilter filter = new RateLimitFilter(objectMapper, true, 1, 60, "10.0.0.254", agora::get);
 
-        // cria entradas que vão expirar
+        MockHttpServletRequest primeira = requisicao("10.0.0.254");
+        primeira.addHeader("X-Forwarded-For", "203.0.113.10");
+        MockHttpServletRequest segunda = requisicao("10.0.0.254");
+        segunda.addHeader("X-Forwarded-For", "203.0.113.11");
+
+        MockHttpServletResponse r1 = executar(filter, primeira);
+        MockHttpServletResponse r2 = executar(filter, segunda);
+
+        assertEquals(HttpStatus.OK.value(), r1.getStatus());
+        assertEquals(HttpStatus.OK.value(), r2.getStatus());
+        assertTrue(filter.janelas().containsKey("203.0.113.10"));
+        assertTrue(filter.janelas().containsKey("203.0.113.11"));
+    }
+
+    @Test
+    void naoDeveConfiarEmXForwardedForQuandoRemotoNaoEProxyConfiavel() throws ServletException, IOException {
+        AtomicLong agora = new AtomicLong(1_000);
+        RateLimitFilter filter = new RateLimitFilter(objectMapper, true, 1, 60, "10.0.0.254", agora::get);
+
+        MockHttpServletRequest primeira = requisicao("198.51.100.20");
+        primeira.addHeader("X-Forwarded-For", "203.0.113.10");
+        MockHttpServletRequest segunda = requisicao("198.51.100.20");
+        segunda.addHeader("X-Forwarded-For", "203.0.113.11");
+
+        MockHttpServletResponse r1 = executar(filter, primeira);
+        MockHttpServletResponse r2 = executar(filter, segunda);
+
+        assertEquals(HttpStatus.OK.value(), r1.getStatus());
+        assertEquals(HttpStatus.TOO_MANY_REQUESTS.value(), r2.getStatus());
+        assertTrue(filter.janelas().containsKey("198.51.100.20"));
+        assertFalse(filter.janelas().containsKey("203.0.113.10"));
+    }
+
+    @Test
+    void deveRemoverJanelasExpiradasDoMapa() throws ServletException, IOException {
+        AtomicLong agora = new AtomicLong(1_000);
+        RateLimitFilter filter = new RateLimitFilter(objectMapper, true, 10, 60, agora::get);
+
         for (int i = 0; i < 50; i++) {
             executar(filter, requisicao("192.168.0." + i));
         }
+        assertEquals(50, filter.janelas().size());
 
-        // cliente ativo
-        executar(filter, requisicao("10.0.0.1"));
-        agora.set(1_061); // expira janelas antigas
-
-        // força limpeza periódica (a cada 100 requisições)
-        for (int i = 0; i < 60; i++) {
-            executar(filter, requisicao("172.16.0." + i));
+        agora.set(1_061); // expira todas
+        // força limpeza periódica
+        for (int i = 0; i < 100; i++) {
+            executar(filter, requisicao("172.16.0." + (i % 10)));
         }
 
-        // cliente ativo ainda deve estar dentro da sua nova janela/estado coerente
-        MockHttpServletResponse ativa = executar(filter, requisicao("10.0.0.1"));
-        assertEquals(HttpStatus.OK.value(), ativa.getStatus());
+        assertFalse(filter.janelas().keySet().stream().anyMatch(k -> k.startsWith("192.168.0.")));
+    }
+
+    @Test
+    void naoDeveRemoverJanelaAtivaDuranteLimpeza() throws ServletException, IOException {
+        AtomicLong agora = new AtomicLong(1_000);
+        RateLimitFilter filter = new RateLimitFilter(objectMapper, true, 10, 60, agora::get);
+
+        executar(filter, requisicao("10.0.0.1"));
+        agora.set(1_030); // ainda ativa
+        for (int i = 0; i < 120; i++) {
+            executar(filter, requisicao("172.16.0." + (i % 5)));
+        }
+        assertTrue(filter.janelas().containsKey("10.0.0.1"));
+    }
+
+    @Test
+    void janelaRenovadaAposExpiracaoNaoDeveSerRemovidaComoExpirada() throws ServletException, IOException {
+        AtomicLong agora = new AtomicLong(1_000);
+        RateLimitFilter filter = new RateLimitFilter(objectMapper, true, 10, 60, agora::get);
+
+        executar(filter, requisicao("10.0.0.1"));
+        assertTrue(filter.janelas().containsKey("10.0.0.1"));
+
+        agora.set(1_061); // expirada
+        // renova a janela com uma requisição antes da limpeza
+        executar(filter, requisicao("10.0.0.1"));
+        assertEquals(1_061, filter.janelas().get("10.0.0.1").inicio());
+
+        // dispara limpeza periódica
+        for (int i = 0; i < 120; i++) {
+            executar(filter, requisicao("172.16.0." + (i % 5)));
+        }
+
+        assertTrue(filter.janelas().containsKey("10.0.0.1"));
+        assertEquals(1_061, filter.janelas().get("10.0.0.1").inicio());
+    }
+
+    @Test
+    void naoDevePerderContadorAtivo() throws ServletException, IOException {
+        AtomicLong agora = new AtomicLong(1_000);
+        RateLimitFilter filter = new RateLimitFilter(objectMapper, true, 2, 60, agora::get);
+
+        executar(filter, requisicao("10.0.0.1")); // 1
+        agora.set(1_030);
+        for (int i = 0; i < 120; i++) {
+            executar(filter, requisicao("172.16.0." + (i % 20)));
+        }
+        // cliente ativo já usou 1 de 2 dentro da mesma janela
+        MockHttpServletResponse segunda = executar(filter, requisicao("10.0.0.1"));
+        MockHttpServletResponse terceira = executar(filter, requisicao("10.0.0.1"));
+        assertEquals(HttpStatus.OK.value(), segunda.getStatus());
+        assertEquals(HttpStatus.TOO_MANY_REQUESTS.value(), terceira.getStatus());
     }
 
     @Test
