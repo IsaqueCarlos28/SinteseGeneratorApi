@@ -464,7 +464,7 @@
       setStatus("Síntese gerada com sucesso.", "success");
     } catch (err) {
       if (err?.name === "AbortError") {
-        showError("A requisi??o demorou demais", "A requisi??o demorou demais. Tente novamente.");
+        showError("Tempo limite excedido", "O processamento ultrapassou o tempo esperado. Tente novamente.");
         setStatus("A requisição não foi concluída.", "");
       } else {
         showError(
