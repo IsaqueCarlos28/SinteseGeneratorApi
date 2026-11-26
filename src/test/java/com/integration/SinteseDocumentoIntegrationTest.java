@@ -33,7 +33,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * extractors → SinteseService → prompt) e mocka apenas a chamada externa
  * à Gemini.
  */
-@SpringBootTest(properties = "gemini.api-key=chave-de-teste")
+@SpringBootTest(properties = {
+        "gemini.api-key=chave-de-teste",
+        "app.rate-limit.enabled=false"
+})
 @AutoConfigureMockMvc
 class SinteseDocumentoIntegrationTest {
 

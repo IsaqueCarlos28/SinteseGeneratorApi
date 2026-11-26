@@ -19,6 +19,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /** Limite físico de arquivo reduzido para 1KB, configurado externamente. */
 @SpringBootTest(properties = {
         "gemini.api-key=chave-de-teste",
+        "app.rate-limit.enabled=false",
         "app.upload.max-file-size=1KB"
 })
 @AutoConfigureMockMvc
