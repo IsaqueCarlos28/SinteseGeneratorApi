@@ -60,7 +60,7 @@ class RateLimitFilterIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(corpo))
                 .andExpect(status().isTooManyRequests())
-                .andExpect(header().string("Retry-After", containsString("")))
+                .andExpect(header().string("Retry-After", org.hamcrest.Matchers.matchesRegex("[1-9]\\d*")))
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.status").value(429))
                 .andExpect(jsonPath("$.title").value("Limite de requisições atingido"));
