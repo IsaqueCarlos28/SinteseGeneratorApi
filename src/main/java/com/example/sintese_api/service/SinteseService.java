@@ -1,7 +1,6 @@
 package com.example.sintese_api.service;
 
 import com.example.sintese_api.exception.SinteseEntradaMuitoGrandeException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import com.example.sintese_api.exception.GeminiException;
 import tools.jackson.databind.ObjectMapper;
@@ -13,6 +12,8 @@ import com.example.sintese_api.dto.SinteseResponse;
 import com.example.sintese_api.prompt.SintesePromptLoader;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class SinteseService {
 
@@ -20,30 +21,20 @@ public class SinteseService {
     private final SintesePromptLoader promptLoader;
     private final GeminiClient geminiClient;
     private final ObjectMapper objectMapper;
-    private final DocumentoSanitizer documentoSanitizer;
+    private final DocumentoTextoNormalizador normalizador;
 
-    @Autowired
     public SinteseService(
             SinteseConfigCalculator configCalculator,
             SintesePromptLoader promptLoader,
             GeminiClient geminiClient,
             ObjectMapper objectMapper,
-            DocumentoSanitizer documentoSanitizer
+            DocumentoTextoNormalizador normalizador
     ) {
         this.configCalculator = configCalculator;
         this.promptLoader = promptLoader;
         this.geminiClient = geminiClient;
         this.objectMapper = objectMapper;
-        this.documentoSanitizer = documentoSanitizer;
-    }
-
-    public SinteseService(
-            SinteseConfigCalculator configCalculator,
-            SintesePromptLoader promptLoader,
-            GeminiClient geminiClient,
-            ObjectMapper objectMapper
-    ) {
-        this(configCalculator, promptLoader, geminiClient, objectMapper, new DocumentoSanitizer());
+        this.normalizador = normalizador;
     }
 
     @Value("${sintese.max-palavras-entrada}")
@@ -51,11 +42,14 @@ public class SinteseService {
 
     public SinteseResponse gerarSintese(SinteseRequest request) {
 
-        int quantidadePalavras = request.documentos()
+        List<String> conteudosSanitizados = request.documentos()
                 .stream()
-                .mapToInt(documento ->
-                        contarPalavras(documento.conteudo())
-                )
+                .map(documento -> normalizador.normalizar(documento.conteudo()))
+                .toList();
+
+        int quantidadePalavras = conteudosSanitizados
+                .stream()
+                .mapToInt(this::contarPalavras)
                 .sum();
 
         if (quantidadePalavras > maxPalavrasEntrada) {
@@ -69,8 +63,6 @@ public class SinteseService {
             );
         }
 
-
-
         SinteseConfig config =
                 configCalculator.calcular(quantidadePalavras);
 
@@ -80,19 +72,17 @@ public class SinteseService {
                 .replace("{min}", String.valueOf(config.minPalavras()))
                 .replace("{max}", String.valueOf(config.maxPalavras()));
 
-        String documentos = request.documentos()
+        String input = conteudosSanitizados
                 .stream()
-                .map(documento ->
+                .map(conteudo ->
                         "<documento>\n"
-                                + documentoSanitizer.sanitizarTagsDocumento(documento.conteudo())
+                                + conteudo
                                 + "\n</documento>"
                 )
                 .reduce((documento1, documento2) ->
                         documento1 + "\n\n" + documento2
                 )
                 .orElse("");
-
-        String input = documentos;
 
         String resposta = geminiClient.gerarSintese(
                 prompt,
@@ -107,7 +97,7 @@ public class SinteseService {
             );
         } catch (Exception exception) {
             throw new GeminiException(
-                    "Não foi possível interpretar a resposta da Gemini.",
+                    "N?o foi poss?vel interpretar a resposta da Gemini.",
                     exception
             );
         }

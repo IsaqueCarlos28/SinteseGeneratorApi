@@ -29,7 +29,8 @@ class DocumentoServiceTest {
     private DocumentoService criarService(DataSize limite) {
         return new DocumentoService(
                 List.of(new TxtExtractor(), new PdfExtractor(), new DocxExtractor()),
-                limite
+                limite,
+                new DocumentoTextoNormalizador()
         );
     }
 

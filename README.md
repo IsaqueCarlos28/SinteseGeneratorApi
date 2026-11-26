@@ -134,8 +134,8 @@ src/main/java/com/example/sintese_api
 ├── prompt
 │   └── SintesePromptLoader.java
 └── service
-    ├── DocumentoSanitizer.java
     ├── DocumentoService.java
+    ├── DocumentoTextoNormalizador.java
     └── SinteseService.java
 
 src/main/resources
@@ -164,6 +164,9 @@ Em ambos os casos é necessário possuir uma chave de API da Gemini (Google AI S
 | `GEMINI_API_KEY` |     Sim     | Chave de acesso à Gemini Interactions API                                                         |    —    |
 | `PORT`           |     Não     | Porta em que a aplicação será executada                                                           |  8080   |
 | `EXPOSE_ERRORS`  |     Não     | Quando `true`, inclui detalhes técnicos de diagnóstico nas respostas de erro 5xx (apenas para depuração) | `false` |
+| `RATE_LIMIT_ENABLED` | Não | Habilita o rate limit por IP nos endpoints `/api/sinteses/**` | `true` |
+| `RATE_LIMIT_MAX_REQUESTS` | Não | Máximo de requisições permitidas por IP dentro da janela | `10` |
+| `RATE_LIMIT_WINDOW_SECONDS` | Não | Duração da janela do rate limit, em segundos | `60` |
 
 Use o arquivo `.env.example` na raiz do projeto como referência para as variáveis de ambiente locais.
 
@@ -182,6 +185,10 @@ gemini.thinking-level=low
 gemini.temperature=0.1
 gemini.max-retries=2
 gemini.retry-backoff-ms=1000
+
+app.rate-limit.enabled=true
+app.rate-limit.max-requests=10
+app.rate-limit.window-seconds=60
 
 sintese.max-palavras-entrada=50000
 sintese.min-output-tokens-limit=500
@@ -459,7 +466,7 @@ A API utiliza respostas padronizadas via `ProblemDetail`:
 |    413 | Arquivo acima de 10 MB ou requisição acima de 30 MB |
 |    415 | Tipo de conteúdo da requisição não suportado, extensão de arquivo não suportada ou `Content-Type` incompatível com a extensão |
 |    422 | Arquivo corrompido, protegido por senha, com extensão trocada ou sem texto extraível (ex.: documento digitalizado) |
-|    429 | Limite de requisições da Gemini atingido (rate limit) |
+|    429 | Limite de requisições atingido (rate limit por IP da API ou limite da Gemini) |
 |    500 | Erro interno inesperado |
 |    502 | Erro durante a comunicação/processamento com a Gemini |
 |    503 | Gemini temporariamente indisponível (alta demanda), mesmo após as novas tentativas automáticas. A resposta inclui o header `Retry-After: 30` |
