@@ -22,7 +22,7 @@ import java.util.Locale;
  * a leitura é delegada aos {@link DocumentoExtractor}.
  * <p>
  * Etapas (cada uma isolada em um método, o que facilita mover o processamento
- * para uma fila no futuro): validar arquivo ? escolher extractor ? extrair ?
+ * para uma fila no futuro): validar arquivo → escolher extractor → extrair →
  * validar e normalizar conteúdo.
  * <p>
  * O limite de palavras NÃO é aplicado aqui: ele continua no
@@ -103,9 +103,9 @@ public class DocumentoService {
     /**
      * A extensão escolhe o formato, e o Content-Type declarado precisa ser
      * compatível com ele. Se o tipo declarado for genérico
-     * (application/octet-stream) ou ausente, ? aceito, porque muitos
+     * (application/octet-stream) ou ausente, é aceito, porque muitos
      * clientes HTTP não o preenchem. A confirmação final de que o conteúdo
-     * ? mesmo daquele formato vem do parser (que falha em arquivo trocado).
+     * é mesmo daquele formato vem do parser (que falha em arquivo trocado).
      */
     private TipoDocumento identificarTipo(MultipartFile arquivo, String nome) {
 
