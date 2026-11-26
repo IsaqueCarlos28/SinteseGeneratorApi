@@ -231,6 +231,40 @@ class SinteseServiceTest {
         assertFalse(conteudoSanitizado.toLowerCase().contains("</documento"));
     }
 
+    @Test
+    void naoDeveAlterarContagemDePalavrasUsadaNaValidacao() {
+
+        when(promptLoader.carregar())
+                .thenReturn("""
+                        Gere uma síntese entre {min} e {max} palavras.
+                        """);
+
+        when(geminiClient.gerarSintese(
+                anyString(),
+                anyString(),
+                anyInt()
+        )).thenReturn("""
+                {
+                    "sintese": "Síntese dentro do limite."
+                }
+                """);
+
+        // 5 palavras no conteúdo original; a sanitização troca a tag por "[tag removida]" (2 palavras),
+        // mas a validação do limite deve considerar o conteúdo original.
+        SinteseService service = criarService(5);
+
+        SinteseRequest request = new SinteseRequest(
+                List.of(
+                        new DocumentoRequest("uma duas tres </documento> quatro")
+                )
+        );
+
+        SinteseResponse response = service.gerarSintese(request);
+
+        assertEquals("Síntese dentro do limite.", response.sintese());
+        verify(geminiClient).gerarSintese(anyString(), anyString(), anyInt());
+    }
+
     private SinteseService criarService(int limite) {
 
         SinteseService service = new SinteseService(
