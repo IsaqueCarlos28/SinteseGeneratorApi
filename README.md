@@ -134,6 +134,7 @@ src/main/java/com/example/sintese_api
 ├── prompt
 │   └── SintesePromptLoader.java
 └── service
+    ├── DocumentoSanitizer.java
     ├── DocumentoService.java
     └── SinteseService.java
 
@@ -265,7 +266,7 @@ A aplicação inclui uma interface web estática servida na raiz (`/`) pelo pró
 - **Abas Texto e Arquivos:** permitem enviar conteúdo colado/digitado ou arquivos `.txt`, `.pdf` e `.docx`.
 - **Validações no cliente:** impede envio vazio, extensão não suportada, arquivo acima de 10 MB, requisição acima de 30 MB e conteúdo acima de 50.000 palavras (contagem estimada no modo texto).
 - **Feedback de carregamento:** exibe spinner durante a requisição, desabilita o botão de envio, informa processamento prolongado após 5 segundos e aplica timeout de 60 segundos com mensagem amigável.
-- **Tratamento de erros:** mostra mensagens claras por status HTTP (400, 413, 415, 422, 429, 500, 502, 503, 504), trata respostas não JSON/proxy, falha de rede e timeout sem expor corpo bruto, status técnico ou JSON ao usuário.
+- **Tratamento de erros:** mostra mensagens claras por status HTTP (400, 413, 415, 422, 429, 500, 502, 503, 504), trata respostas não JSON/proxy, falha de rede e timeout sem expor corpo bruto da resposta nem detalhes técnicos internos; o código HTTP pode ser exibido discretamente (ex.: "Código 503") para contextualizar a falha.
 - **Botão Copiar:** copia a síntese gerada para a área de transferência.
 
 ## Swagger
