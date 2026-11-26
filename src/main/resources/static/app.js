@@ -4,6 +4,9 @@
   const MAX_WORDS = 50000;
   const MAX_FILE_SIZE = 10 * 1024 * 1024;
   const MAX_REQUEST_SIZE = 30 * 1024 * 1024;
+  // Margem conservadora para boundaries/cabeçalhos multipart; o backend aplica 30 MB na requisição total.
+  const MULTIPART_OVERHEAD_MARGIN = 256 * 1024;
+  const MAX_FILES_TOTAL_SIZE = MAX_REQUEST_SIZE - MULTIPART_OVERHEAD_MARGIN;
   const ALLOWED_EXTENSIONS = [".txt", ".pdf", ".docx"];
 
   const tabs = Array.from(document.querySelectorAll(".tab"));
@@ -181,9 +184,9 @@
       })
       .join("");
 
-    const requestWarning = totalSize > MAX_REQUEST_SIZE
-      ? `<p class="file-size" style="color:#b91c1c;margin:0.25rem 0 0;">Tamanho total: ${formatBytes(totalSize)} (acima do limite de 30 MB da requisição)</p>`
-      : `<p class="file-size" style="margin:0.25rem 0 0;">Tamanho total: ${formatBytes(totalSize)}</p>`;
+    const requestWarning = totalSize > MAX_FILES_TOTAL_SIZE
+      ? `<p class="file-size" style="color:#b91c1c;margin:0.25rem 0 0;">Tamanho total dos arquivos: ${formatBytes(totalSize)} (acima do limite seguro de envio; a requisição suporta até 30 MB no total, incluindo overhead multipart)</p>`
+      : `<p class="file-size" style="margin:0.25rem 0 0;">Tamanho total dos arquivos: ${formatBytes(totalSize)}</p>`;
 
     fileListEl.innerHTML = `${items}${requestWarning}`;
 
@@ -274,8 +277,11 @@
     }
 
     const totalSize = selectedFiles.reduce((sum, f) => sum + f.size, 0);
-    if (totalSize > MAX_REQUEST_SIZE) {
-      return { ok: false, message: "A soma dos arquivos excede o limite de 30 MB da requisição." };
+    if (totalSize > MAX_FILES_TOTAL_SIZE) {
+      return {
+        ok: false,
+        message: "A soma dos arquivos excede o limite seguro de envio. A requisição suporta até 30 MB no total, incluindo overhead do envio multipart.",
+      };
     }
 
     return { ok: true };
@@ -458,7 +464,7 @@
       setStatus("Síntese gerada com sucesso.", "success");
     } catch (err) {
       if (err?.name === "AbortError") {
-        showError("A requisição demorou demais", "A requisição demorou demais. Tente novamente.");
+        showError("A requisi??o demorou demais", "A requisi??o demorou demais. Tente novamente.");
         setStatus("A requisição não foi concluída.", "");
       } else {
         showError(
