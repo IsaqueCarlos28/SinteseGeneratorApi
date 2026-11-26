@@ -13,6 +13,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -214,6 +215,67 @@ class RateLimitFilterTest {
         MockHttpServletResponse terceira = executar(filter, requisicao("10.0.0.1"));
         assertEquals(HttpStatus.OK.value(), segunda.getStatus());
         assertEquals(HttpStatus.TOO_MANY_REQUESTS.value(), terceira.getStatus());
+    }
+
+    @Test
+    void naoDeveReiniciarContadorQuandoConsumoEConcorrenteComLimpeza() throws Exception {
+        AtomicLong agora = new AtomicLong(1_000);
+        int limite = 2;
+        AtomicBoolean pausar = new AtomicBoolean(true);
+        CountDownLatch cleanupPodeTentar = new CountDownLatch(1);
+        CountDownLatch continuarConsumo = new CountDownLatch(1);
+        CountDownLatch cleanupConcluida = new CountDownLatch(1);
+
+        RateLimitFilter filter = new RateLimitFilter(objectMapper, true, limite, 60, agora::get) {
+            @Override
+            protected void antesDeConsumir(String chave, long agoraAtual) {
+                if ("10.0.0.1".equals(chave) && agoraAtual == 1_061L && pausar.compareAndSet(true, false)) {
+                    cleanupPodeTentar.countDown();
+                    try {
+                        assertTrue(continuarConsumo.await(5, TimeUnit.SECONDS), "consumo não liberado");
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        throw new RuntimeException(e);
+                    }
+                }
+            }
+        };
+
+        // consome 1 da janela inicial
+        assertEquals(HttpStatus.OK.value(), executar(filter, requisicao("10.0.0.1")).getStatus());
+        agora.set(1_061); // janela expirada
+
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            java.util.concurrent.Future<MockHttpServletResponse> reqA = pool.submit(() -> executar(filter, requisicao("10.0.0.1")));
+
+            assertTrue(cleanupPodeTentar.await(5, TimeUnit.SECONDS), "hook não alcançado");
+
+            pool.submit(() -> {
+                filter.limparJanelasExpiradas(1_061);
+                cleanupConcluida.countDown();
+            });
+
+            // limpeza não deve concluir enquanto compute da mesma chave está em andamento
+            assertFalse(cleanupConcluida.await(300, TimeUnit.MILLISECONDS), "limpeza concluiu indevidamente durante consumo");
+
+            continuarConsumo.countDown();
+
+            MockHttpServletResponse respostaA = reqA.get(5, TimeUnit.SECONDS);
+            assertEquals(HttpStatus.OK.value(), respostaA.getStatus());
+            assertTrue(cleanupConcluida.await(5, TimeUnit.SECONDS), "limpeza não concluiu");
+
+            MockHttpServletResponse respostaB = executar(filter, requisicao("10.0.0.1"));
+            MockHttpServletResponse respostaC = executar(filter, requisicao("10.0.0.1"));
+
+            assertEquals(HttpStatus.OK.value(), respostaB.getStatus());
+            assertEquals(HttpStatus.TOO_MANY_REQUESTS.value(), respostaC.getStatus());
+            assertTrue(filter.janelas().containsKey("10.0.0.1"));
+            assertEquals(1_061, filter.janelas().get("10.0.0.1").inicio());
+        } finally {
+            pool.shutdownNow();
+            assertTrue(pool.awaitTermination(5, TimeUnit.SECONDS));
+        }
     }
 
     @Test

@@ -97,10 +97,19 @@ public class RateLimitFilter extends OncePerRequestFilter {
         limparJanelasExpiradasSeNecessario(agora);
 
         String chave = chaveCliente(request);
-        Janela janela = janelas.computeIfAbsent(chave, k -> new Janela(agora));
+        ResultadoRateLimit[] holder = new ResultadoRateLimit[1];
 
-        ResultadoRateLimit resultado = janela.tentarConsumir(agora, windowSeconds, maxRequests);
+        janelas.compute(chave, (k, existente) -> {
+            Janela janela = existente;
+            if (janela == null || janela.expirada(agora, windowSeconds)) {
+                janela = new Janela(agora);
+            }
+            antesDeConsumir(chave, agora);
+            holder[0] = janela.tentarConsumir(agora, windowSeconds, maxRequests);
+            return janela;
+        });
 
+        ResultadoRateLimit resultado = holder[0];
         if (!resultado.permitido()) {
             escreverResposta429(request, response, resultado.retryAfterSegundos());
             return;
@@ -176,15 +185,24 @@ public class RateLimitFilter extends OncePerRequestFilter {
         return normalizado;
     }
 
-    private void limparJanelasExpiradasSeNecessario(long agora) {
+    void limparJanelasExpiradasSeNecessario(long agora) {
         int contagem = contadorRequisicoes.incrementAndGet();
         if (contagem % LIMPEZA_A_CADA_REQUISICOES != 0) {
             return;
         }
+        limparJanelasExpiradas(agora);
+    }
+
+    void limparJanelasExpiradas(long agora) {
         janelas.forEach((chave, janela) -> janelas.computeIfPresent(
                 chave,
                 (k, atual) -> atual.expirada(agora, windowSeconds) ? null : atual
         ));
+    }
+
+    /** Hook de teste para coordenar cenários concorrentes de forma determinística. */
+    protected void antesDeConsumir(String chave, long agora) {
+        // no-op em produção
     }
 
     private void escreverResposta429(
