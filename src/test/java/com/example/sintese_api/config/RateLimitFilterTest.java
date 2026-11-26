@@ -221,22 +221,31 @@ class RateLimitFilterTest {
     void naoDeveReiniciarContadorQuandoConsumoEConcorrenteComLimpeza() throws Exception {
         AtomicLong agora = new AtomicLong(1_000);
         int limite = 2;
-        AtomicBoolean pausar = new AtomicBoolean(true);
-        CountDownLatch cleanupPodeTentar = new CountDownLatch(1);
-        CountDownLatch continuarConsumo = new CountDownLatch(1);
-        CountDownLatch cleanupConcluida = new CountDownLatch(1);
+        AtomicBoolean pausarConsumo = new AtomicBoolean(true);
+        CountDownLatch consumoPausadoNoCompute = new CountDownLatch(1);
+        CountDownLatch liberarConsumo = new CountDownLatch(1);
+        CountDownLatch limpezaIniciada = new CountDownLatch(1);
+        CountDownLatch limpezaChegouNaChave = new CountDownLatch(1);
+        CountDownLatch limpezaConcluida = new CountDownLatch(1);
 
         RateLimitFilter filter = new RateLimitFilter(objectMapper, true, limite, 60, agora::get) {
             @Override
             protected void antesDeConsumir(String chave, long agoraAtual) {
-                if ("10.0.0.1".equals(chave) && agoraAtual == 1_061L && pausar.compareAndSet(true, false)) {
-                    cleanupPodeTentar.countDown();
+                if ("10.0.0.1".equals(chave) && agoraAtual == 1_061L && pausarConsumo.compareAndSet(true, false)) {
+                    consumoPausadoNoCompute.countDown();
                     try {
-                        assertTrue(continuarConsumo.await(5, TimeUnit.SECONDS), "consumo não liberado");
+                        assertTrue(liberarConsumo.await(5, TimeUnit.SECONDS), "consumo não liberado");
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
                         throw new RuntimeException(e);
                     }
+                }
+            }
+
+            @Override
+            protected void antesDeTentarLimparJanela(String chave, long agoraAtual) {
+                if ("10.0.0.1".equals(chave) && agoraAtual == 1_061L) {
+                    limpezaChegouNaChave.countDown();
                 }
             }
         };
@@ -249,21 +258,25 @@ class RateLimitFilterTest {
         try {
             java.util.concurrent.Future<MockHttpServletResponse> reqA = pool.submit(() -> executar(filter, requisicao("10.0.0.1")));
 
-            assertTrue(cleanupPodeTentar.await(5, TimeUnit.SECONDS), "hook não alcançado");
+            assertTrue(consumoPausadoNoCompute.await(5, TimeUnit.SECONDS), "consumo não pausou dentro do compute");
 
             pool.submit(() -> {
+                limpezaIniciada.countDown();
                 filter.limparJanelasExpiradas(1_061);
-                cleanupConcluida.countDown();
+                limpezaConcluida.countDown();
             });
 
-            // limpeza não deve concluir enquanto compute da mesma chave está em andamento
-            assertFalse(cleanupConcluida.await(300, TimeUnit.MILLISECONDS), "limpeza concluiu indevidamente durante consumo");
+            assertTrue(limpezaIniciada.await(5, TimeUnit.SECONDS), "tarefa de limpeza não iniciou");
+            assertTrue(limpezaChegouNaChave.await(5, TimeUnit.SECONDS), "limpeza não tentou processar a chave concorrente");
 
-            continuarConsumo.countDown();
+            // limpeza chegou à mesma chave, mas não deve concluir enquanto compute da mesma chave está em andamento
+            assertFalse(limpezaConcluida.await(300, TimeUnit.MILLISECONDS), "limpeza concluiu indevidamente durante consumo");
+
+            liberarConsumo.countDown();
 
             MockHttpServletResponse respostaA = reqA.get(5, TimeUnit.SECONDS);
             assertEquals(HttpStatus.OK.value(), respostaA.getStatus());
-            assertTrue(cleanupConcluida.await(5, TimeUnit.SECONDS), "limpeza não concluiu");
+            assertTrue(limpezaConcluida.await(5, TimeUnit.SECONDS), "limpeza não concluiu após liberação do consumo");
 
             MockHttpServletResponse respostaB = executar(filter, requisicao("10.0.0.1"));
             MockHttpServletResponse respostaC = executar(filter, requisicao("10.0.0.1"));

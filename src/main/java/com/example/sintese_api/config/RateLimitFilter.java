@@ -194,14 +194,22 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     void limparJanelasExpiradas(long agora) {
-        janelas.forEach((chave, janela) -> janelas.computeIfPresent(
-                chave,
-                (k, atual) -> atual.expirada(agora, windowSeconds) ? null : atual
-        ));
+        janelas.forEach((chave, janela) -> {
+            antesDeTentarLimparJanela(chave, agora);
+            janelas.computeIfPresent(
+                    chave,
+                    (k, atual) -> atual.expirada(agora, windowSeconds) ? null : atual
+            );
+        });
     }
 
     /** Hook de teste para coordenar cenários concorrentes de forma determinística. */
     protected void antesDeConsumir(String chave, long agora) {
+        // no-op em produção
+    }
+
+    /** Hook de teste para confirmar que a limpeza atingiu a tentativa de processar uma chave. */
+    protected void antesDeTentarLimparJanela(String chave, long agora) {
         // no-op em produção
     }
 
