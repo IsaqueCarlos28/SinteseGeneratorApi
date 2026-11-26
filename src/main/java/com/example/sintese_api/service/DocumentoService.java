@@ -8,6 +8,7 @@ import com.example.sintese_api.exception.TipoArquivoNaoSuportadoException;
 import com.example.sintese_api.extractor.DocumentoExtractor;
 import com.example.sintese_api.extractor.NomeArquivo;
 import com.example.sintese_api.extractor.TipoDocumento;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.unit.DataSize;
@@ -34,14 +35,6 @@ public class DocumentoService {
 
     private static final String OCTET_STREAM = "application/octet-stream";
 
-    /**
-     * O prompt trata como dado tudo que estiver dentro de <documento>.
-     * Um arquivo que contenha "</documento>" poderia fechar a tag e fazer
-     * o resto do texto parecer instrução; por isso essas tags são removidas.
-     */
-    private static final Pattern TAG_DOCUMENTO =
-            Pattern.compile("(?i)<\\s*/?\\s*documento\\b[^>]*>");
-
     private static final Pattern CARACTERES_DE_CONTROLE =
             Pattern.compile("[\\p{Cntrl}&&[^\\n\\t]]");
 
@@ -50,13 +43,24 @@ public class DocumentoService {
 
     private final List<DocumentoExtractor> extractors;
     private final DataSize tamanhoMaximo;
+    private final DocumentoSanitizer documentoSanitizer;
 
+    @Autowired
     public DocumentoService(
             List<DocumentoExtractor> extractors,
-            @Value("${app.upload.max-file-size}") DataSize tamanhoMaximo
+            @Value("${app.upload.max-file-size}") DataSize tamanhoMaximo,
+            DocumentoSanitizer documentoSanitizer
     ) {
         this.extractors = extractors;
         this.tamanhoMaximo = tamanhoMaximo;
+        this.documentoSanitizer = documentoSanitizer;
+    }
+
+    public DocumentoService(
+            List<DocumentoExtractor> extractors,
+            DataSize tamanhoMaximo
+    ) {
+        this(extractors, tamanhoMaximo, new DocumentoSanitizer());
     }
 
     public List<DocumentoRequest> extrairDocumentos(
@@ -196,8 +200,7 @@ public class DocumentoService {
         resultado = CARACTERES_DE_CONTROLE
                 .matcher(resultado).replaceAll("");
 
-        resultado = TAG_DOCUMENTO
-                .matcher(resultado).replaceAll("[tag removida]");
+        resultado = documentoSanitizer.sanitizarTagsDocumento(resultado);
 
         resultado = LINHAS_EM_BRANCO_EXCESSIVAS
                 .matcher(resultado).replaceAll("\n\n");

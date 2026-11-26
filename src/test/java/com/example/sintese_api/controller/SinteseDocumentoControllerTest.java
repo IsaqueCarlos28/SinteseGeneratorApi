@@ -6,6 +6,7 @@ import com.example.sintese_api.dto.SinteseResponse;
 import com.example.sintese_api.extractor.DocxExtractor;
 import com.example.sintese_api.extractor.PdfExtractor;
 import com.example.sintese_api.extractor.TxtExtractor;
+import com.example.sintese_api.service.DocumentoSanitizer;
 import com.example.sintese_api.service.DocumentoService;
 import com.example.sintese_api.service.SinteseService;
 import org.junit.jupiter.api.Test;
@@ -31,6 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(SinteseDocumentoController.class)
 @Import({
         DocumentoService.class,
+        DocumentoSanitizer.class,
         TxtExtractor.class,
         PdfExtractor.class,
         DocxExtractor.class

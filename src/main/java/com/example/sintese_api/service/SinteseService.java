@@ -1,6 +1,7 @@
 package com.example.sintese_api.service;
 
 import com.example.sintese_api.exception.SinteseEntradaMuitoGrandeException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import com.example.sintese_api.exception.GeminiException;
 import tools.jackson.databind.ObjectMapper;
@@ -19,6 +20,22 @@ public class SinteseService {
     private final SintesePromptLoader promptLoader;
     private final GeminiClient geminiClient;
     private final ObjectMapper objectMapper;
+    private final DocumentoSanitizer documentoSanitizer;
+
+    @Autowired
+    public SinteseService(
+            SinteseConfigCalculator configCalculator,
+            SintesePromptLoader promptLoader,
+            GeminiClient geminiClient,
+            ObjectMapper objectMapper,
+            DocumentoSanitizer documentoSanitizer
+    ) {
+        this.configCalculator = configCalculator;
+        this.promptLoader = promptLoader;
+        this.geminiClient = geminiClient;
+        this.objectMapper = objectMapper;
+        this.documentoSanitizer = documentoSanitizer;
+    }
 
     public SinteseService(
             SinteseConfigCalculator configCalculator,
@@ -26,10 +43,7 @@ public class SinteseService {
             GeminiClient geminiClient,
             ObjectMapper objectMapper
     ) {
-        this.configCalculator = configCalculator;
-        this.promptLoader = promptLoader;
-        this.geminiClient = geminiClient;
-        this.objectMapper = objectMapper;
+        this(configCalculator, promptLoader, geminiClient, objectMapper, new DocumentoSanitizer());
     }
 
     @Value("${sintese.max-palavras-entrada}")
@@ -70,7 +84,7 @@ public class SinteseService {
                 .stream()
                 .map(documento ->
                         "<documento>\n"
-                                + documento.conteudo()
+                                + documentoSanitizer.sanitizarTagsDocumento(documento.conteudo())
                                 + "\n</documento>"
                 )
                 .reduce((documento1, documento2) ->
