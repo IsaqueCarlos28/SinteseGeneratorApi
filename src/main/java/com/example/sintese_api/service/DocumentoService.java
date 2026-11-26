@@ -19,14 +19,14 @@ import java.util.Locale;
 /**
  * Transforma arquivos enviados em {@link DocumentoRequest}, o mesmo modelo
  * usado pelo fluxo textual (JSON). Não conhece nenhum formato específico:
- * a leitura ? delegada aos {@link DocumentoExtractor}.
+ * a leitura é delegada aos {@link DocumentoExtractor}.
  * <p>
- * Etapas (cada uma isolada em um m?todo, o que facilita mover o processamento
+ * Etapas (cada uma isolada em um método, o que facilita mover o processamento
  * para uma fila no futuro): validar arquivo ? escolher extractor ? extrair ?
  * validar e normalizar conteúdo.
  * <p>
- * O limite de palavras N?O ? aplicado aqui: ele continua no
- * {@code SinteseService}, sobre o texto j? extra?do.
+ * O limite de palavras NÃO é aplicado aqui: ele continua no
+ * {@code SinteseService}, sobre o texto já extraído.
  */
 @Service
 public class DocumentoService {
@@ -88,13 +88,13 @@ public class DocumentoService {
 
         if (arquivo.isEmpty()) {
             throw new ArquivoInvalidoException(
-                    "O arquivo '" + nome + "' est? vazio."
+                    "O arquivo '" + nome + "' está vazio."
             );
         }
 
         if (arquivo.getSize() > tamanhoMaximo.toBytes()) {
             throw new ArquivoMuitoGrandeException(
-                    "O arquivo '" + nome + "' excede o tamanho m?ximo de "
+                    "O arquivo '" + nome + "' excede o tamanho máximo de "
                             + tamanhoMaximo.toMegabytes() + " MB."
             );
         }
@@ -102,7 +102,7 @@ public class DocumentoService {
 
     /**
      * A extensão escolhe o formato, e o Content-Type declarado precisa ser
-     * compat?vel com ele. Se o tipo declarado for gen?rico
+     * compatível com ele. Se o tipo declarado for genérico
      * (application/octet-stream) ou ausente, ? aceito, porque muitos
      * clientes HTTP não o preenchem. A confirmação final de que o conteúdo
      * ? mesmo daquele formato vem do parser (que falha em arquivo trocado).
