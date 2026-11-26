@@ -29,7 +29,7 @@ import static org.mockito.Mockito.when;
 class SinteseServiceTest {
 
     private final SinteseConfigCalculator configCalculator =
-            new SinteseConfigCalculator();
+            new SinteseConfigCalculator(500);
 
     private final SintesePromptLoader promptLoader =
             Mockito.mock(SintesePromptLoader.class);
@@ -81,7 +81,7 @@ class SinteseServiceTest {
         verify(geminiClient).gerarSintese(
                 contains("1"),
                 contains("<documento>"),
-                eq(100)
+                eq(500)
         );
     }
 

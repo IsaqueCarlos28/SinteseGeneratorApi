@@ -167,6 +167,7 @@ Em ambos os casos é necessário possuir uma chave de API da Gemini (Google AI S
 | `RATE_LIMIT_ENABLED` | Não | Habilita o rate limit por IP nos endpoints `/api/sinteses/**` | `true` |
 | `RATE_LIMIT_MAX_REQUESTS` | Não | Máximo de requisições permitidas por IP dentro da janela | `10` |
 | `RATE_LIMIT_WINDOW_SECONDS` | Não | Duração da janela do rate limit, em segundos | `60` |
+| `RATE_LIMIT_TRUSTED_PROXIES` | Não | Lista CSV de IPs de proxies reversos confiáveis. Vazio = não confiar em `X-Forwarded-For` (usa `remoteAddr`) | vazio |
 
 Use o arquivo `.env.example` na raiz do projeto como referência para as variáveis de ambiente locais.
 

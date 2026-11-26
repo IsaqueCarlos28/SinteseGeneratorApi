@@ -8,8 +8,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class SinteseConfigCalculatorTest {
 
+    private static final int MIN_OUTPUT_TOKENS_LIMIT = 500;
+
     private final SinteseConfigCalculator calculator =
-            new SinteseConfigCalculator();
+            new SinteseConfigCalculator(MIN_OUTPUT_TOKENS_LIMIT);
 
     @Test
     void deveCalcularLimitesParaTextosMuitoPequenos() {
@@ -18,7 +20,7 @@ class SinteseConfigCalculatorTest {
 
         assertEquals(1, config.minPalavras());
         assertEquals(50, config.maxPalavras());
-        assertEquals(100, config.maxOutputTokens());
+        assertEquals(500, config.maxOutputTokens());
     }
 
     @Test
@@ -28,7 +30,7 @@ class SinteseConfigCalculatorTest {
 
         assertEquals(30, config.minPalavras());
         assertEquals(80, config.maxPalavras());
-        assertEquals(148, config.maxOutputTokens());
+        assertEquals(500, config.maxOutputTokens());
     }
 
     @Test
@@ -38,7 +40,7 @@ class SinteseConfigCalculatorTest {
 
         assertEquals(60, config.minPalavras());
         assertEquals(160, config.maxPalavras());
-        assertEquals(276, config.maxOutputTokens());
+        assertEquals(500, config.maxOutputTokens());
     }
 
     @Test
@@ -48,7 +50,7 @@ class SinteseConfigCalculatorTest {
 
         assertEquals(120, config.minPalavras());
         assertEquals(280, config.maxPalavras());
-        assertEquals(468, config.maxOutputTokens());
+        assertEquals(500, config.maxOutputTokens());
     }
 
     @Test
@@ -99,11 +101,13 @@ class SinteseConfigCalculatorTest {
 
     @ParameterizedTest
     @CsvSource({
-            "10, 100",
-            "50, 100",
-            "60, 116"
+            "10, 500",
+            "50, 500",
+            "60, 500",
+            "800, 500",
+            "1500, 692"
     })
-    void deveGarantirMinimoDe100TokensParaTextosPequenos(
+    void deveRespeitarMinimoConfiguradoDeTokens(
             int palavras,
             int tokensEsperados
     ) {

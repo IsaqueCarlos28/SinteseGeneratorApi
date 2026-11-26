@@ -27,6 +27,12 @@ public final class Arquivos {
         try (InputStream entrada = Arquivos.class
                 .getResourceAsStream("/documentos/" + nome)) {
 
+            if (entrada == null) {
+                throw new IllegalStateException(
+                        "Recurso de teste não encontrado no classpath: /documentos/" + nome
+                );
+            }
+
             return entrada.readAllBytes();
 
         } catch (IOException exception) {
