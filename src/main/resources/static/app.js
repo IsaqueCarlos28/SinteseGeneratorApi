@@ -4,6 +4,9 @@
   const MAX_WORDS = 50000;
   const MAX_FILE_SIZE = 10 * 1024 * 1024;
   const MAX_REQUEST_SIZE = 30 * 1024 * 1024;
+  // Margem conservadora para boundaries/cabeçalhos multipart; o backend aplica 30 MB na requisição total.
+  const MULTIPART_OVERHEAD_MARGIN = 256 * 1024;
+  const MAX_FILES_TOTAL_SIZE = MAX_REQUEST_SIZE - MULTIPART_OVERHEAD_MARGIN;
   const ALLOWED_EXTENSIONS = [".txt", ".pdf", ".docx"];
 
   const tabs = Array.from(document.querySelectorAll(".tab"));
@@ -58,8 +61,12 @@
   }
 
   function setStatus(message, type = "") {
-    statusEl.textContent = message;
     statusEl.className = `status ${type}`.trim();
+    if (type === "loading") {
+      statusEl.innerHTML = `<span class="spinner" aria-hidden="true"></span><span>${escapeHtml(message)}</span>`;
+      return;
+    }
+    statusEl.textContent = message;
   }
 
   function clearError() {
@@ -177,9 +184,9 @@
       })
       .join("");
 
-    const requestWarning = totalSize > MAX_REQUEST_SIZE
-      ? `<p class="file-size" style="color:#b91c1c;margin:0.25rem 0 0;">Tamanho total: ${formatBytes(totalSize)} (acima do limite de 30 MB da requisição)</p>`
-      : `<p class="file-size" style="margin:0.25rem 0 0;">Tamanho total: ${formatBytes(totalSize)}</p>`;
+    const requestWarning = totalSize > MAX_FILES_TOTAL_SIZE
+      ? `<p class="file-size" style="color:#b91c1c;margin:0.25rem 0 0;">Tamanho total dos arquivos: ${formatBytes(totalSize)} (acima do limite seguro de envio; a requisição suporta até 30 MB no total, incluindo overhead multipart)</p>`
+      : `<p class="file-size" style="margin:0.25rem 0 0;">Tamanho total dos arquivos: ${formatBytes(totalSize)}</p>`;
 
     fileListEl.innerHTML = `${items}${requestWarning}`;
 
@@ -270,43 +277,120 @@
     }
 
     const totalSize = selectedFiles.reduce((sum, f) => sum + f.size, 0);
-    if (totalSize > MAX_REQUEST_SIZE) {
-      return { ok: false, message: "A soma dos arquivos excede o limite de 30 MB da requisição." };
+    if (totalSize > MAX_FILES_TOTAL_SIZE) {
+      return {
+        ok: false,
+        message: "A soma dos arquivos excede o limite seguro de envio. A requisição suporta até 30 MB no total, incluindo overhead do envio multipart.",
+      };
     }
 
     return { ok: true };
   }
 
   async function parseResponse(response) {
-    const contentType = response.headers.get("content-type") || "";
-    if (contentType.includes("application/json")) {
+    const contentType = (response.headers.get("content-type") || "").toLowerCase();
+    if (contentType.includes("json")) {
       try {
         return await response.json();
       } catch {
         return null;
       }
     }
-    try {
-      const text = await response.text();
-      return text ? { detail: text } : null;
-    } catch {
-      return null;
-    }
+    return null;
   }
 
-  function buildErrorMeta(response, payload) {
-    const meta = [`Status HTTP: ${response.status}`];
-    const retryAfter = response.headers.get("Retry-After");
-    if (retryAfter) {
-      meta.push(`Retry-After: ${retryAfter} segundo(s)`);
+  function getRetryAfterSeconds(response) {
+    const value = response.headers.get("Retry-After");
+    if (!value) return null;
+    const seconds = Number.parseInt(value, 10);
+    return Number.isFinite(seconds) && seconds > 0 ? seconds : null;
+  }
+
+  function resolveErrorMessage(response, payload) {
+    const status = response.status;
+    const hasJson = payload && typeof payload === "object";
+    const apiTitle = typeof payload?.title === "string" ? payload.title : "";
+    const apiDetail = typeof payload?.detail === "string" ? payload.detail : "";
+
+    if (status === 400) {
+      return {
+        title: "Requisição inválida",
+        detail: apiDetail || "Verifique os dados enviados e tente novamente.",
+      };
     }
-    if (payload?.instance) {
-      meta.push(`Instância: ${payload.instance}`);
+    if (status === 413) {
+      return {
+        title: "Arquivo muito grande",
+        detail: "Cada arquivo pode ter até 10 MB e a requisição até 30 MB.",
+      };
     }
-    if (response.status === 503) {
-      meta.push("A Gemini pode estar com alta demanda. Aguarde e tente novamente.");
+    if (status === 415 || status === 422) {
+      return {
+        title: apiTitle || (status === 415 ? "Tipo de conteúdo não suportado" : "Documento não processável"),
+        detail: apiDetail || "Não foi possível processar o conteúdo enviado.",
+      };
     }
-    return meta;
+    if (status === 429) {
+      return {
+        title: "Muitas requisições",
+        detail: "O limite de uso da IA foi atingido. Aguarde um pouco e tente novamente.",
+      };
+    }
+    if (status === 502) {
+      if (!hasJson) {
+        return {
+          title: "Serviço indisponível",
+          detail: "O servidor pode estar iniciando. Aguarde alguns segundos e tente novamente.",
+        };
+      }
+      return {
+        title: "Falha ao gerar a síntese",
+        detail: "Não foi possível processar a síntese agora. Tente novamente.",
+      };
+    }
+    if (status === 503) {
+      if (!hasJson) {
+        return {
+          title: "Serviço indisponível",
+          detail: "O servidor pode estar iniciando. Aguarde alguns segundos e tente novamente.",
+        };
+      }
+      const retryAfter = getRetryAfterSeconds(response);
+      const waitMessage = retryAfter
+        ? `Aguarde cerca de ${retryAfter} segundos e tente novamente.`
+        : "Aguarde alguns instantes e tente novamente.";
+      return {
+        title: "IA com alta demanda",
+        detail: waitMessage,
+      };
+    }
+    if (status === 504) {
+      if (!hasJson) {
+        return {
+          title: "Serviço indisponível",
+          detail: "O servidor pode estar iniciando. Aguarde alguns segundos e tente novamente.",
+        };
+      }
+      return {
+        title: "A IA demorou demais",
+        detail: "Tente novamente ou envie um conteúdo menor.",
+      };
+    }
+    if (status === 500 || !hasJson) {
+      return {
+        title: "Erro inesperado",
+        detail: "Algo deu errado. Tente novamente em instantes.",
+      };
+    }
+
+    return {
+      title: apiTitle || "Erro inesperado",
+      detail: apiDetail || "Algo deu errado. Tente novamente em instantes.",
+    };
+  }
+
+  function buildStatusCodeMeta(status) {
+    return Number.isFinite(status) ? [`Código ${status}`] : [];
   }
 
   async function submit() {
@@ -342,25 +426,36 @@
       options = { method: "POST", body: formData };
     }
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const slowStatusId = setTimeout(() => {
+      if (submitBtn.disabled) {
+        setStatus("Ainda processando... isso pode levar alguns segundos.", "loading");
+      }
+    }, 5000);
+
     submitBtn.disabled = true;
     submitBtn.textContent = "Gerando síntese...";
     setStatus("Enviando conteúdo e aguardando a resposta da API...", "loading");
 
     try {
-      const response = await fetch(url, options);
+      const response = await fetch(url, { ...options, signal: controller.signal });
       const payload = await parseResponse(response);
 
       if (!response.ok) {
-        const title = payload?.title || `Erro ${response.status}`;
-        const detail = payload?.detail || "A API retornou um erro sem detalhes.";
-        showError(title, detail, buildErrorMeta(response, payload));
+        const error = resolveErrorMessage(response, payload);
+        showError(error.title, error.detail, buildStatusCodeMeta(response.status));
         setStatus("A requisição não foi concluída.", "");
         return;
       }
 
       const sintese = payload?.sintese;
       if (typeof sintese !== "string" || !sintese.trim()) {
-        showError("Resposta inesperada", "A API respondeu com sucesso, mas o campo 'sintese' não foi encontrado.");
+        showError(
+          "Resposta inesperada",
+          "A API respondeu com sucesso, mas o campo 'sintese' não foi encontrado.",
+          buildStatusCodeMeta(response.status)
+        );
         setStatus("Resposta inesperada da API.", "");
         return;
       }
@@ -368,13 +463,19 @@
       setResult(sintese);
       setStatus("Síntese gerada com sucesso.", "success");
     } catch (err) {
-      showError(
-        "Falha de conexão",
-        "Não foi possível conectar à API. Verifique se a aplicação está rodando e tente novamente.",
-        [err?.message ? `Detalhe: ${err.message}` : ""]
-      );
-      setStatus("Falha de conexão com a API.", "");
+      if (err?.name === "AbortError") {
+        showError("Tempo limite excedido", "O processamento ultrapassou o tempo esperado. Tente novamente.");
+        setStatus("A requisição não foi concluída.", "");
+      } else {
+        showError(
+          "Falha de conexão",
+          "Não foi possível conectar à API. Verifique se a aplicação está rodando e tente novamente."
+        );
+        setStatus("Falha de conexão com a API.", "");
+      }
     } finally {
+      clearTimeout(timeoutId);
+      clearTimeout(slowStatusId);
       submitBtn.disabled = false;
       submitBtn.textContent = "Gerar síntese";
     }

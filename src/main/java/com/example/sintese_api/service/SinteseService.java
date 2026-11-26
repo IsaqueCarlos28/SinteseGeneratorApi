@@ -97,7 +97,7 @@ public class SinteseService {
             );
         } catch (Exception exception) {
             throw new GeminiException(
-                    "Não foi possível interpretar a resposta da Gemini.",
+                    "N?o foi poss?vel interpretar a resposta da Gemini.",
                     exception
             );
         }

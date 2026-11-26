@@ -6,6 +6,25 @@ A aplicação recebe um ou mais documentos — como **texto em JSON** ou como **
 
 **Categoria do trabalho:** Geração de Conteúdo (criação automatizada de um texto/resumo a partir de parâmetros do usuário).
 
+## Aplicação em produção
+
+- **URL pública da aplicação:** https://sintesegeneratorapi.onrender.com
+- **Swagger UI:** https://sintesegeneratorapi.onrender.com/swagger-ui.html
+- **OpenAPI:** https://sintesegeneratorapi.onrender.com/v3/api-docs
+
+> No plano gratuito do Render, a primeira requisição após um período de inatividade pode demorar mais, pois o serviço pode estar iniciando (cold start).
+
+## Arquitetura em produção
+
+- **Frontend estático e API** são hospedados juntos no Render, na mesma origem, por isso não há necessidade de CORS.
+- A **chave da Gemini** fica apenas como variável de ambiente no Render e nunca é enviada ao navegador.
+- A **chamada à Gemini** é feita exclusivamente pelo backend Spring Boot.
+- O **deploy** é realizado a partir da imagem/branch `main`.
+
+```text
+Navegador -> Render (Frontend estático + API Spring Boot) -> Gemini API
+```
+
 ## Tecnologias
 
 * Java 25
@@ -116,6 +135,7 @@ src/main/java/com/example/sintese_api
 │   └── SintesePromptLoader.java
 └── service
     ├── DocumentoService.java
+    ├── DocumentoTextoNormalizador.java
     └── SinteseService.java
 
 src/main/resources
@@ -147,6 +167,8 @@ Em ambos os casos é necessário possuir uma chave de API da Gemini (Google AI S
 | `RATE_LIMIT_ENABLED` | Não | Habilita o rate limit por IP nos endpoints `/api/sinteses/**` | `true` |
 | `RATE_LIMIT_MAX_REQUESTS` | Não | Máximo de requisições permitidas por IP dentro da janela | `10` |
 | `RATE_LIMIT_WINDOW_SECONDS` | Não | Duração da janela do rate limit, em segundos | `60` |
+
+Use o arquivo `.env.example` na raiz do projeto como referência para as variáveis de ambiente locais.
 
 A chave da Gemini **nunca** é armazenada no código-fonte nem commitada no repositório — ela é lida exclusivamente da variável de ambiente `GEMINI_API_KEY`.
 
@@ -216,8 +238,8 @@ A imagem é publicada automaticamente pelo workflow do GitHub Actions (`.github/
 Clone o projeto:
 
 ```bash
-git clone <URL_DO_REPOSITORIO>
-cd sintese-api
+git clone https://github.com/IsaqueCarlos28/SinteseGeneratorApi.git
+cd SinteseGeneratorApi
 ```
 
 Construa a imagem:
@@ -243,6 +265,16 @@ mvn spring-boot:run
 ```
 
 A aplicação estará disponível em `http://localhost:8080`.
+
+## Frontend
+
+A aplicação inclui uma interface web estática servida na raiz (`/`) pelo próprio Spring Boot.
+
+- **Abas Texto e Arquivos:** permitem enviar conteúdo colado/digitado ou arquivos `.txt`, `.pdf` e `.docx`.
+- **Validações no cliente:** impede envio vazio, extensão não suportada, arquivo acima de 10 MB, requisição acima de 30 MB e conteúdo acima de 50.000 palavras (contagem estimada no modo texto).
+- **Feedback de carregamento:** exibe spinner durante a requisição, desabilita o botão de envio, informa processamento prolongado após 5 segundos e aplica timeout de 60 segundos com mensagem amigável.
+- **Tratamento de erros:** mostra mensagens claras por status HTTP (400, 413, 415, 422, 429, 500, 502, 503, 504), trata respostas não JSON/proxy, falha de rede e timeout sem expor corpo bruto da resposta nem detalhes técnicos internos; o código HTTP pode ser exibido discretamente (ex.: "Código 503") para contextualizar a falha.
+- **Botão Copiar:** copia a síntese gerada para a área de transferência.
 
 ## Swagger
 
@@ -467,7 +499,7 @@ Exemplo de erro no fluxo por arquivos:
 Os testes automatizados cobrem:
 
 * cálculo da configuração da síntese (`SinteseConfigCalculatorTest`);
-* geração de síntese e regras de negócio (`SinteseServiceTest`);
+* geração de síntese, regras de negócio e sanitização de tags `<documento>` no endpoint JSON (`SinteseServiceTest`);
 * validação, JSON inválido, múltiplos documentos, limite de entrada, 404, 405, 415 no endpoint JSON (`SinteseControllerTest`);
 * endpoint de arquivos: ausência de arquivo, arquivo vazio, formato não suportado, arquivo corrompido e requisição que não é multipart (`SinteseDocumentoControllerTest`);
 * validação e normalização de arquivos: tamanho, extensão, `Content-Type`, texto vazio, remoção de tags `<documento>` e caracteres de controle (`DocumentoServiceTest`);

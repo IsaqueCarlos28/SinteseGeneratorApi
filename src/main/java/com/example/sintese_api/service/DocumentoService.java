@@ -18,15 +18,15 @@ import java.util.Locale;
 
 /**
  * Transforma arquivos enviados em {@link DocumentoRequest}, o mesmo modelo
- * usado pelo fluxo textual (JSON). Não conhece nenhum formato específico:
- * a leitura é delegada aos {@link DocumentoExtractor}.
+ * usado pelo fluxo textual (JSON). N?o conhece nenhum formato espec?fico:
+ * a leitura ? delegada aos {@link DocumentoExtractor}.
  * <p>
- * Etapas (cada uma isolada em um método, o que facilita mover o processamento
- * para uma fila no futuro): validar arquivo → escolher extractor → extrair →
- * validar e normalizar conteúdo.
+ * Etapas (cada uma isolada em um m?todo, o que facilita mover o processamento
+ * para uma fila no futuro): validar arquivo ? escolher extractor ? extrair ?
+ * validar e normalizar conte?do.
  * <p>
- * O limite de palavras NÃO é aplicado aqui: ele continua no
- * {@code SinteseService}, sobre o texto já extraído.
+ * O limite de palavras N?O ? aplicado aqui: ele continua no
+ * {@code SinteseService}, sobre o texto j? extra?do.
  */
 @Service
 public class DocumentoService {
@@ -74,7 +74,7 @@ public class DocumentoService {
                 .filter(candidato -> candidato.suporta(tipo.contentType()))
                 .findFirst()
                 .orElseThrow(() -> new TipoArquivoNaoSuportadoException(
-                        "O arquivo '" + nome + "' não é suportado. "
+                        "O arquivo '" + nome + "' n?o ? suportado. "
                                 + "Formatos aceitos: "
                                 + TipoDocumento.extensoesAceitas() + "."
                 ));
@@ -88,24 +88,24 @@ public class DocumentoService {
 
         if (arquivo.isEmpty()) {
             throw new ArquivoInvalidoException(
-                    "O arquivo '" + nome + "' está vazio."
+                    "O arquivo '" + nome + "' est? vazio."
             );
         }
 
         if (arquivo.getSize() > tamanhoMaximo.toBytes()) {
             throw new ArquivoMuitoGrandeException(
-                    "O arquivo '" + nome + "' excede o tamanho máximo de "
+                    "O arquivo '" + nome + "' excede o tamanho m?ximo de "
                             + tamanhoMaximo.toMegabytes() + " MB."
             );
         }
     }
 
     /**
-     * A extensão escolhe o formato, e o Content-Type declarado precisa ser
-     * compatível com ele. Se o tipo declarado for genérico
-     * (application/octet-stream) ou ausente, é aceito, porque muitos
-     * clientes HTTP não o preenchem. A confirmação final de que o conteúdo
-     * é mesmo daquele formato vem do parser (que falha em arquivo trocado).
+     * A extens?o escolhe o formato, e o Content-Type declarado precisa ser
+     * compat?vel com ele. Se o tipo declarado for gen?rico
+     * (application/octet-stream) ou ausente, ? aceito, porque muitos
+     * clientes HTTP n?o o preenchem. A confirma??o final de que o conte?do
+     * ? mesmo daquele formato vem do parser (que falha em arquivo trocado).
      */
     private TipoDocumento identificarTipo(MultipartFile arquivo, String nome) {
 
@@ -121,8 +121,8 @@ public class DocumentoService {
 
         if (!compativel) {
             throw new TipoArquivoNaoSuportadoException(
-                    "O tipo de conteúdo '" + declarado + "' do arquivo '"
-                            + nome + "' não corresponde à extensão ."
+                    "O tipo de conte?do '" + declarado + "' do arquivo '"
+                            + nome + "' n?o corresponde ? extens?o ."
                             + tipo.extensao() + "."
             );
         }
@@ -132,7 +132,7 @@ public class DocumentoService {
 
     private TipoArquivoNaoSuportadoException tipoNaoSuportado(String nome) {
         return new TipoArquivoNaoSuportadoException(
-                "O arquivo '" + nome + "' não é suportado. "
+                "O arquivo '" + nome + "' n?o ? suportado. "
                         + "Formatos aceitos: "
                         + TipoDocumento.extensoesAceitas() + "."
         );
@@ -149,7 +149,7 @@ public class DocumentoService {
             throw exception;
         } catch (RuntimeException exception) {
             throw new DocumentoNaoProcessavelException(
-                    "Não foi possível processar o arquivo '" + nome + "'.",
+                    "N?o foi poss?vel processar o arquivo '" + nome + "'.",
                     exception
             );
         }
@@ -161,8 +161,8 @@ public class DocumentoService {
 
         if (normalizado.isBlank()) {
             throw new DocumentoNaoProcessavelException(
-                    "O arquivo '" + nome + "' não contém texto extraível. "
-                            + "Documentos digitalizados (imagens) não são "
+                    "O arquivo '" + nome + "' n?o cont?m texto extra?vel. "
+                            + "Documentos digitalizados (imagens) n?o s?o "
                             + "suportados."
             );
         }

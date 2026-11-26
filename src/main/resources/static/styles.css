@@ -441,6 +441,9 @@ textarea::placeholder {
 }
 
 .status.loading {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
   color: #1d4ed8;
   font-weight: 600;
 }
@@ -448,6 +451,22 @@ textarea::placeholder {
 .status.success {
   color: var(--success);
   font-weight: 600;
+}
+
+.spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid #bfdbfe;
+  border-top-color: #1d4ed8;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .result-box {
@@ -555,5 +574,6 @@ textarea::placeholder {
   *::after {
     scroll-behavior: auto !important;
     transition: none !important;
+    animation: none !important;
   }
 }
